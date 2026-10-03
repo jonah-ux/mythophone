@@ -11,7 +11,7 @@ This checklist keeps the first release's source, local runtime, provider, and pu
 - Configured AI mode is visibly separate and returns an explicit `provider_unconfigured` failure when server configuration is absent; the current patch remains playable after that failure.
 - Reduced-motion preferences remove the keyboard press transform and shorten any future CSS animation/transition duration.
 - The measured sound field exposes active voices and macro values through an accessible label and responds to live note activity.
-- A fresh shallow clone of the published performance-field branch ran `npm ci` and `npm run verify` successfully at reviewed head `f21f4337747d226d6e44720d83706034afcabbb3`.
+- A fresh shallow clone of the published performance-field branch ran `npm ci` and `npm run verify` successfully at reviewed head `ff1f9556cfa69b2b171e856ec4fcaf48920a7a7a`.
 - Three short prepared audio examples are retained under `public/audio/`: Rain cello (2.433s), Sand bell (1.989s), and Mechanical dragon (0.939s), each 44.1 kHz mono PCM/WAV. They were measured as rendered files; this run did not include a listening review.
 
 ## Still required before calling the first release complete
