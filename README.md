@@ -17,6 +17,14 @@ Open http://127.0.0.1:5175, press **Enable audio**, and hold the on-screen keys 
 
 No model credentials or private service are required for this mode. The prepared patches are labeled as prepared; they are not represented as fresh model output.
 
+### Prepared audio examples
+
+These short mono PCM/WAV examples were rendered from the prepared patches through the browser's offline path and checked as finite files. They are included as inspectable artifacts; this run measured them but did not perform a listening review.
+
+- [Rain cello demo](public/audio/rain-cello-demo.wav) · 2.433 seconds at 44.1 kHz
+- [Sand bell demo](public/audio/sand-bell-demo.wav) · 1.989 seconds at 44.1 kHz
+- [Mechanical dragon demo](public/audio/mechanical-dragon-demo.wav) · 0.939 seconds at 44.1 kHz
+
 ## Checks
 
 `sh
