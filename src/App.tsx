@@ -11,6 +11,9 @@ import {
 import { exportPatch, importPatch, parsePatch } from './domain'
 import type { Patch } from './domain'
 import { DesignError, requestDesign } from './designer'
+import { createPerformanceRecorder, type PerformanceRecording } from './recording'
+import { downloadWav } from './wav'
+import { compilePatch } from './audio'
 import './App.css'
 
 const presets = source.map(value => parsePatch(value))
@@ -47,11 +50,16 @@ export default function App() {
   const [designPrompt, setDesignPrompt] = useState('A cello made of rain.')
   const [designing, setDesigning] = useState(false)
   const [designerStatus, setDesignerStatus] = useState('Prepared patches are available without a provider key.')
+  const [patchHistory, setPatchHistory] = useState<Patch[]>([])
+  const [recording, setRecording] = useState<PerformanceRecording | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [exportingWav, setExportingWav] = useState(false)
   const context = useRef<AudioContext | null>(null)
   const instrument = useRef<ReturnType<typeof createInstrument> | null>(null)
   const held = useRef(new Map<string, VoiceHandle>())
   const picker = useRef<HTMLInputElement>(null)
   const designAbort = useRef<AbortController | null>(null)
+  const [recorder] = useState(() => createPerformanceRecorder())
   const startVoiceRef = useRef<(token: string, note: number, velocity?: number) => Promise<void>>(async () => undefined)
   const endVoiceRef = useRef<(token: string) => void>(() => undefined)
 
@@ -71,13 +79,15 @@ export default function App() {
 
   function choose(next: Patch) {
     // Compile first. If it fails, the existing instrument remains playable.
-    const replacement = context.current ? createInstrument(context.current, next) : null
+    const compiled = compilePatch(next)
+    const replacement = context.current ? createInstrument(context.current, compiled) : null
     const prior = instrument.current
     held.current.clear()
     instrument.current = replacement
     prior?.dispose()
-    setPreset(next)
-    setActivity(replacement?.activity() ?? { activeVoices: 0, sustain: false, macroValues: next.macros, lastNote: null })
+    setPatchHistory(history => [...history.slice(-7), preset])
+    setPreset(compiled)
+    setActivity(replacement?.activity() ?? { activeVoices: 0, sustain: false, macroValues: compiled.macros, lastNote: null })
     setRenderStats(null)
     setMessage(`Prepared instrument: ${next.name}`)
   }
@@ -88,17 +98,20 @@ export default function App() {
       const synth = await enableAudio()
       const voice = synth.noteOn(note, velocity)
       held.current.set(token, voice)
+      recorder.push({ type: 'note-on', note, velocity })
       syncActivity()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Audio unavailable')
     }
-  }, [enableAudio, syncActivity])
+  }, [enableAudio, recorder, syncActivity])
 
   const endVoice = useCallback((token: string) => {
-    held.current.get(token)?.release()
+    const voice = held.current.get(token)
+    voice?.release()
+    if (voice) recorder.push({ type: 'note-off', note: voice.note })
     held.current.delete(token)
     syncActivity()
-  }, [syncActivity])
+  }, [recorder, syncActivity])
 
   useEffect(() => {
     startVoiceRef.current = startVoice
@@ -108,6 +121,9 @@ export default function App() {
   function stopAll() {
     instrument.current?.allNotesOff()
     held.current.clear()
+    const currentRecording = recorder.stop()
+    if (currentRecording.events.length > 0) setRecording(currentRecording)
+    setIsRecording(false)
     setSustain(false)
     syncActivity()
     setMessage('All voices released.')
@@ -116,6 +132,7 @@ export default function App() {
   function changeSustain(next: boolean) {
     setSustain(next)
     instrument.current?.setSustain(next)
+    recorder.push({ type: 'sustain', value: next })
     syncActivity()
     setMessage(next ? 'Sustain held. Release it to finish held voices.' : 'Sustain released.')
   }
@@ -124,6 +141,7 @@ export default function App() {
     const nextValue = Math.min(Math.max(value, 0), 1)
     setPreset(current => ({ ...current, macros: { ...current.macros, [name]: nextValue } }))
     instrument.current?.setMacro(name, nextValue)
+    recorder.push({ type: 'macro', name, value: nextValue })
     if (instrument.current) syncActivity()
     else setActivity(current => ({ ...current, macroValues: { ...current.macroValues, [name]: nextValue } }))
   }
@@ -193,6 +211,53 @@ export default function App() {
     }
   }
 
+  function toggleRecording() {
+    if (recorder.isRecording()) {
+      const next = recorder.stop()
+      setRecording(next)
+      setIsRecording(false)
+      setMessage('Recorded ' + next.events.length + ' performance events.')
+      return
+    }
+    recorder.start()
+    setRecording(null)
+    setIsRecording(true)
+    setMessage('Recording performance. Play notes, move macros, then stop recording.')
+  }
+
+  function revertPatch() {
+    const previous = patchHistory.at(-1)
+    if (!previous) return
+    setPatchHistory(history => history.slice(0, -1))
+    const replacement = context.current ? createInstrument(context.current, previous) : null
+    const prior = instrument.current
+    held.current.clear()
+    instrument.current = replacement
+    prior?.dispose()
+    setPreset(previous)
+    setActivity(replacement?.activity() ?? { activeVoices: 0, sustain: false, macroValues: previous.macros, lastNote: null })
+    setRenderStats(null)
+    setMessage('Reverted to ' + previous.name + '.')
+  }
+
+  async function exportRecordingWav() {
+    const saved = recording ?? recorder.getRecording()
+    if (saved.events.length === 0) {
+      setMessage('Record a performance before exporting WAV.')
+      return
+    }
+    setExportingWav(true)
+    try {
+      const result = await renderPerformance(preset, saved.events, { duration: saved.duration + preset.envelope.release + 0.1 })
+      downloadWav(result.buffer, preset.id + '-performance.wav')
+      setMessage('Exported ' + preset.name + ' performance as WAV.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'WAV export failed')
+    } finally {
+      setExportingWav(false)
+    }
+  }
+
   useEffect(() => {
     const active = held.current
     const stop = () => {
@@ -253,6 +318,7 @@ export default function App() {
       </div>
 
       <div className="transport"><label className="sustain-toggle"><input type="checkbox" checked={sustain} onChange={event => changeSustain(event.target.checked)} /> <span>Sustain</span></label><span className="activity">{activity.lastNote ? `Last note ${activity.lastNote}` : 'No note yet'} · {activity.activeVoices ? 'sound is moving' : 'ready to play'}</span><button className="secondary" onClick={stopAll}>All notes off <kbd>Esc</kbd></button></div>
+      <div className="recording-bar"><button className={isRecording ? 'recording' : 'secondary'} onClick={toggleRecording}>{isRecording ? 'Stop recording' : 'Record performance'}</button><span>{recording ? recording.events.length + ' events captured' : 'Record notes and macro moves for a portable take.'}</span></div>
       <p role="status" className="message">{message}</p>
     </section>
 
@@ -261,7 +327,7 @@ export default function App() {
       {renderStats && <div className="metrics" aria-label="Rendered audio metrics"><div><strong>{renderStats.finite ? 'Finite' : 'Invalid'}</strong><small>samples</small></div><div><strong>{renderStats.peak.toFixed(3)}</strong><small>peak</small></div><div><strong>{renderStats.rms.toFixed(4)}</strong><small>RMS</small></div><div><strong>{formatMetric(renderStats.estimatedFrequency)} Hz</strong><small>zero-crossing estimate</small></div><div><strong>{renderStats.tailRms.toFixed(5)}</strong><small>tail RMS</small></div></div>}
     </section>
 
-    <section className="panel tools-panel"><div className="actions"><button className="secondary" onClick={save}>Export patch</button><button className="secondary" onClick={() => picker.current?.click()}>Import patch</button><input ref={picker} type="file" accept="application/json,.json" hidden onChange={event => { void load(event.target.files?.[0]) }} /></div><details><summary>Inspect patch data</summary><pre>{JSON.stringify(preset, null, 2)}</pre></details></section>
+    <section className="panel tools-panel"><div className="actions"><button className="secondary" onClick={save}>Export patch</button><button className="secondary" onClick={() => picker.current?.click()}>Import patch</button><button className="secondary" onClick={revertPatch} disabled={patchHistory.length === 0}>Revert patch</button><button className="secondary" onClick={() => { void exportRecordingWav() }} disabled={exportingWav || !(recording?.events.length)}>{exportingWav ? 'Rendering WAV…' : 'Export performance WAV'}</button><input ref={picker} type="file" accept="application/json,.json" hidden onChange={event => { void load(event.target.files?.[0]) }} /></div><details><summary>Inspect patch data</summary><pre>{JSON.stringify(preset, null, 2)}</pre></details>{recording && <details><summary>Inspect recorded events ({recording.events.length})</summary><pre>{JSON.stringify(recording, null, 2)}</pre></details>}</section>
     <footer>Keyboard: A W S E D F T G Y H U J K · pointer keys support press-and-hold · Space is reserved for future recording.</footer>
   </main>
 }
