@@ -8,10 +8,10 @@ Invent an instrument, inspect its patch, and play it.
 
 ## Hear it first
 
-`sh
+```sh
 npm ci
 npm run dev
-`
+```
 
 Open http://127.0.0.1:5175, press **Enable audio**, and hold the on-screen keys or `A W S E D F T G Y H U J K`. Choose **Rain cello**, **Sand bell**, or **Mechanical dragon**, then move Brightness, Texture, and Motion while a note is held. `Esc` releases every voice. The **Render audio check** button renders the same patch through the browser's real `OfflineAudioContext` and reports finite samples, peak, RMS, pitch estimate, and tail RMS.
 
@@ -27,9 +27,9 @@ These short mono PCM/WAV examples were rendered from the prepared patches throug
 
 ## Checks
 
-`sh
+```sh
 npm run verify
-`
+```
 
 This runs oxlint, TypeScript, focused schema/engine/designer tests, server adapter tests, and the production build. The browser render check is additional runtime evidence because a Node unit test or a mocked `AudioContext` cannot prove that a real browser graph produces finite audio.
 
@@ -70,9 +70,9 @@ The adapter is provider-shaped but provider-agnostic. This repository does not c
 
 Use **Export patch** to save a `.mythophone.json` file. Import validates and upgrades the original starter `mythophone/preset/v1` shape without requesting a model. Patch data contains no credentials, URLs, executable code, AudioWorklet source, or provider history.
 
-## Next slice
+## Release path
 
-The remaining product work is patch history/revert, performance recording, WAV export, a credentialed provider canary, and broader browser/audio acceptance. See [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md) and the complete [build prompt](docs/BUILD-PROMPT.md).
+The playable, portable, and measured no-key path is implemented. The remaining release gate is a credentialed provider canary plus the broader browser/audio matrix and release-owner publication. See [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md), [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md), and the complete [build prompt](docs/BUILD-PROMPT.md).
 
 ## Provenance and limits
 

@@ -32,6 +32,11 @@ const macroControls: Array<{ name: MacroName; label: string; hint: string }> = [
   { name: 'texture', label: 'Texture', hint: 'adds the air/noise layer' },
   { name: 'motion', label: 'Motion', hint: 'turns on pitch drift' },
 ]
+const preparedExamples = [
+  { name: 'Rain cello', id: 'rain-cello', file: '/audio/rain-cello-demo.wav', duration: '2.433s', description: 'sustained airy texture' },
+  { name: 'Sand bell', id: 'sand-bell', file: '/audio/sand-bell-demo.wav', duration: '1.989s', description: 'struck tone into a dry tail' },
+  { name: 'Mechanical dragon', id: 'mechanical-dragon', file: '/audio/mechanical-dragon-demo.wav', duration: '0.939s', description: 'playful square-metal growl' },
+]
 
 function formatMetric(value: number | null) {
   return value === null ? '—' : value.toFixed(1)
@@ -308,6 +313,7 @@ export default function App() {
       <p>Describe a myth, inspect the bounded patch, then perform it with your hands.</p>
     </header>
     <div className="status"><strong>{designMode === 'prepared' ? 'Prepared mode' : 'Configured AI mode'}</strong> · {designMode === 'prepared' ? 'no key required; these patches are authored examples' : 'provider is optional; keys stay on the server'} · patch compiler validates every graph before it can replace the active sound</div>
+    <section className="panel examples-panel"><div className="section-heading"><div><span className="eyebrow">HEAR THE PREPARED PATCHES</span><h2>Three bounded interpretations</h2><p>These short mono WAVs were rendered from the prepared patches through the offline path. This page exposes the files for listening; the release receipt records their measured format separately.</p></div><span className="voice-meter">44.1 kHz · mono</span></div><div className="example-grid">{preparedExamples.map(example => <article key={example.id} className="example-card"><div><strong>{example.name}</strong><small>{example.description} · {example.duration}</small></div><audio controls preload="metadata" src={example.file} aria-label={example.name + ' prepared audio example'} /></article>)}</div></section>
 
     <section className="panel designer-panel">
       <div className="section-heading"><div><span className="eyebrow">DESCRIBE A MYTH</span><h2>Sound designer</h2><p>{designMode === 'prepared' ? 'Try the no-key instruments first, then opt into a configured provider when you are ready.' : 'The browser sends only a bounded prompt and current patch to /api/design. Provider output is validated before it can replace the active instrument.'}</p></div><div className="mode-actions"><button className={designMode === 'prepared' ? 'selected' : 'secondary'} onClick={() => setDesignMode('prepared')}>Prepared</button><button className={designMode === 'configured' ? 'selected' : 'secondary'} onClick={() => setDesignMode('configured')}>Configured AI</button></div></div>

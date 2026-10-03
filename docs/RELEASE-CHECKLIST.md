@@ -17,6 +17,5 @@ This checklist keeps the first release's source, local runtime, provider, and pu
 ## Still required before calling the first release complete
 
 - Exercise one credentialed real provider through `/api/design`, read back its validated patch, render notes from it, and exercise one scoped edit.
-- Capture and retain original short rendered audio examples from the browser and record whether the environment listened to them or only measured their samples.
 - Run the broader release browser/audio matrix on the named release environment, then publish through the repository's release owner.
 - Record deployment/public-hosting state separately from local source and CI evidence.
