@@ -1,0 +1,41 @@
+{
+  "schema": "mythophone/patch/v1",
+  "id": "rain-cello",
+  "name": "Rain cello",
+  "description": "A warm bowed body with a controllable veil of rain-like air.",
+  "oscillator": {
+    "type": "triangle",
+    "mix": 0.82,
+    "detune": 0,
+    "octave": 0
+  },
+  "subOscillator": {
+    "type": "sine",
+    "mix": 0.34,
+    "detune": -4,
+    "octave": -1
+  },
+  "noise": {
+    "mix": 0.12,
+    "color": "white"
+  },
+  "envelope": {
+    "level": 0.092,
+    "attack": 0.18,
+    "decay": 0.28,
+    "sustain": 0.72,
+    "release": 1.8
+  },
+  "filter": {
+    "type": "lowpass",
+    "cutoff": 2400,
+    "resonance": 1.4
+  },
+  "masterGain": 0.72,
+  "voiceLimit": 8,
+  "macros": {
+    "brightness": 0.52,
+    "texture": 0.28,
+    "motion": 0.12
+  }
+}

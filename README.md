@@ -25,6 +25,8 @@ These short mono PCM/WAV examples were rendered from the prepared patches throug
 - [Sand bell demo](public/audio/sand-bell-demo.wav) · 1.989 seconds at 44.1 kHz
 - [Mechanical dragon demo](public/audio/mechanical-dragon-demo.wav) · 0.939 seconds at 44.1 kHz
 
+Each prepared example also has a canonical patch file for inspection or import: [Rain cello](public/patches/rain-cello.mythophone.json), [Sand bell](public/patches/sand-bell.mythophone.json), and [Mechanical dragon](public/patches/mechanical-dragon.mythophone.json).
+
 ## Checks
 
 ```sh
