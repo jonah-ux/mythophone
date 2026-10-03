@@ -14,6 +14,7 @@ import { DesignError, requestDesign } from './designer'
 import { createPerformanceRecorder, exportPerformanceBundle, importPerformanceBundle, type PerformanceRecording } from './recording'
 import { downloadWav } from './wav'
 import { compilePatch } from './audio'
+import { createPatchShareUrl, readSharedPatch } from './share'
 import './App.css'
 
 const presets = source.map(value => parsePatch(value))
@@ -37,17 +38,19 @@ const preparedExamples = [
   { name: 'Sand bell', id: 'sand-bell', file: '/audio/sand-bell-demo.wav', patch: '/patches/sand-bell.mythophone.json', duration: '1.989s', description: 'struck tone into a dry tail' },
   { name: 'Mechanical dragon', id: 'mechanical-dragon', file: '/audio/mechanical-dragon-demo.wav', patch: '/patches/mechanical-dragon.mythophone.json', duration: '0.939s', description: 'playful square-metal growl' },
 ]
+const initialShared = typeof window === 'undefined' ? { patch: null, error: null } : readSharedPatch(window.location.hash)
+const initialPreset = initialShared.patch ?? presets[0]
 
 function formatMetric(value: number | null) {
   return value === null ? '—' : value.toFixed(1)
 }
 
 export default function App() {
-  const [preset, setPreset] = useState<Patch>(presets[0])
+  const [preset, setPreset] = useState<Patch>(initialPreset)
   const [audioReady, setAudioReady] = useState(false)
   const [sustain, setSustain] = useState(false)
-  const [activity, setActivity] = useState<AudioActivity>({ activeVoices: 0, sustain: false, macroValues: presets[0].macros, lastNote: null })
-  const [message, setMessage] = useState('Enable audio, then play with A W S E D F T G Y H U J K.')
+  const [activity, setActivity] = useState<AudioActivity>({ activeVoices: 0, sustain: false, macroValues: initialPreset.macros, lastNote: null })
+  const [message, setMessage] = useState(initialShared.patch ? `Loaded shared patch: ${initialShared.patch.name}.` : initialShared.error ? `Shared patch ignored: ${initialShared.error}.` : 'Enable audio, then play with A W S E D F T G Y H U J K.')
   const [rendering, setRendering] = useState(false)
   const [renderStats, setRenderStats] = useState<RenderedAudioAnalysis | null>(null)
   const [designMode, setDesignMode] = useState<'prepared' | 'configured'>('prepared')
@@ -221,6 +224,16 @@ export default function App() {
     link.click()
     setTimeout(() => URL.revokeObjectURL(url), 0)
     setMessage(`Exported ${preset.name} as a portable patch.`)
+  }
+
+  async function copyShareLink() {
+    try {
+      const url = createPatchShareUrl(preset, window.location)
+      await navigator.clipboard.writeText(url)
+      setMessage(`Copied a share link for ${preset.name}.`)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Share link could not be copied.')
+    }
   }
 
   async function load(file?: File) {
@@ -414,7 +427,7 @@ export default function App() {
       {renderStats && <div className="metrics" aria-label="Rendered audio metrics"><div><strong>{renderStats.finite ? 'Finite' : 'Invalid'}</strong><small>samples</small></div><div><strong>{renderStats.peak.toFixed(3)}</strong><small>peak</small></div><div><strong>{renderStats.rms.toFixed(4)}</strong><small>RMS</small></div><div><strong>{formatMetric(renderStats.estimatedFrequency)} Hz</strong><small>zero-crossing estimate</small></div><div><strong>{renderStats.tailRms.toFixed(5)}</strong><small>tail RMS</small></div></div>}
     </section>
 
-    <section className="panel tools-panel"><div className="actions"><button className="secondary" onClick={save}>Export patch</button><button className="secondary" onClick={() => picker.current?.click()}>Import patch</button><button className="secondary" onClick={revertPatch} disabled={patchHistory.length === 0}>Revert patch</button><button className="secondary" onClick={saveRecording} disabled={isRecording || !(recording?.events.length)}>Export portable take</button><button className="secondary" onClick={() => performancePicker.current?.click()} disabled={isRecording}>Import portable take</button><button className="secondary" onClick={() => { void exportRecordingWav() }} disabled={exportingWav || isRecording || !(recording?.events.length)}>{exportingWav ? 'Rendering WAV…' : 'Export performance WAV'}</button><input ref={picker} type="file" accept="application/json,.json" hidden onChange={event => { void load(event.target.files?.[0]) }} /><input ref={performancePicker} type="file" accept="application/json,.json" hidden onChange={event => { void loadRecording(event.target.files?.[0]) }} /></div><details><summary>Inspect patch data</summary><pre>{JSON.stringify(preset, null, 2)}</pre></details>{recording && <details><summary>Inspect recorded events ({recording.events.length})</summary><pre>{JSON.stringify(recording, null, 2)}</pre></details>}<p className="tool-hint">Portable takes bundle the validated patch with the timed performance, so another browser can restore the instrument before rendering its WAV.</p></section>
+    <section className="panel tools-panel"><div className="actions"><button className="secondary" onClick={save}>Export patch</button><button className="secondary" onClick={copyShareLink}>Copy share link</button><button className="secondary" onClick={() => picker.current?.click()}>Import patch</button><button className="secondary" onClick={revertPatch} disabled={patchHistory.length === 0}>Revert patch</button><button className="secondary" onClick={saveRecording} disabled={isRecording || !(recording?.events.length)}>Export portable take</button><button className="secondary" onClick={() => performancePicker.current?.click()} disabled={isRecording}>Import portable take</button><button className="secondary" onClick={() => { void exportRecordingWav() }} disabled={exportingWav || isRecording || !(recording?.events.length)}>{exportingWav ? 'Rendering WAV…' : 'Export performance WAV'}</button><input ref={picker} type="file" accept="application/json,.json" hidden onChange={event => { void load(event.target.files?.[0]) }} /><input ref={performancePicker} type="file" accept="application/json,.json" hidden onChange={event => { void loadRecording(event.target.files?.[0]) }} /></div><details><summary>Inspect patch data</summary><pre>{JSON.stringify(preset, null, 2)}</pre></details>{recording && <details><summary>Inspect recorded events ({recording.events.length})</summary><pre>{JSON.stringify(recording, null, 2)}</pre></details>}<p className="tool-hint">Portable takes bundle the validated patch with the timed performance. Copy share link shares only the validated patch in the URL hash; another browser can load it without a provider request.</p></section>
     <footer>Keyboard: A W S E D F T G Y H U J K · pointer keys support press-and-hold · Space is reserved for future recording.</footer>
   </main>
 }

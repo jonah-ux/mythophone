@@ -71,7 +71,7 @@ The adapter is provider-shaped but provider-agnostic. This repository does not c
 
 ## Portable patches
 
-Use **Export patch** to save a `.mythophone.json` file. Import validates and upgrades the original starter `mythophone/preset/v1` shape without requesting a model. Patch data contains no credentials, URLs, executable code, AudioWorklet source, or provider history.
+Use **Export patch** to save a `.mythophone.json` file, or **Copy share link** to put the same validated patch in a bounded `#patch=` URL hash. Opening that link restores the instrument without requesting a model. Import validates and upgrades the original starter `mythophone/preset/v1` shape without requesting a model. Patch data contains no credentials, URLs, executable code, AudioWorklet source, or provider history.
 
 ## Release path
 

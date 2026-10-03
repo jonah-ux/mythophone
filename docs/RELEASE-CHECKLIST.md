@@ -20,6 +20,7 @@ This checklist keeps the first release's source, local runtime, provider, and pu
 - A fresh shallow clone of the performance-field branch ran `npm ci` and `npm run verify` successfully at reviewed head `8759b74bf100e90a2b612a8a3e95daa8b3760965`.
 - Three short prepared audio examples are retained under `public/audio/`: Rain cello (2.433s), Sand bell (1.989s), and Mechanical dragon (0.939s), each 44.1 kHz mono PCM/WAV. They were measured as rendered files; this run did not include a listening review.
 - Canonical prepared patch JSON examples are retained under `public/patches/` and linked beside the browser audio controls for inspection or import.
+- The no-key UI can copy a bounded `#patch=` share link; a receiving browser validates it with the same patch importer without a provider request.
 - Node contract tests guard the prepared WAV containers as non-empty mono 44.1 kHz 16-bit PCM files with the expected distinct frame counts.
 
 ## Still required before calling the first release complete
