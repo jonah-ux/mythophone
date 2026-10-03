@@ -92,7 +92,7 @@ export function compilePatch(value: unknown): Patch {
   return PatchSchema.parse(value)
 }
 
-export function createInstrument(context: BaseAudioContext, value: unknown) {
+export function createInstrument(context: BaseAudioContext, value: unknown, onVoiceEnded?: () => void) {
   const patch = compilePatch(value)
   const master = context.createGain()
   master.gain.setValueAtTime(clamp(patch.masterGain, 0.1, 1), context.currentTime)
@@ -142,6 +142,7 @@ export function createInstrument(context: BaseAudioContext, value: unknown) {
     voice.envelope.disconnect()
     voice.lfo.disconnect()
     voice.lfoGain.disconnect()
+    onVoiceEnded?.()
   }
 
   function releaseVoice(voice: InternalVoice, at: number, force: boolean) {

@@ -80,6 +80,11 @@ export default function App() {
   const startVoiceRef = useRef<(token: string, note: number, velocity?: number) => Promise<void>>(async () => undefined)
   const endVoiceRef = useRef<(token: string) => void>(() => undefined)
 
+  const handleVoiceEnded = useCallback(() => {
+    const current = instrument.current
+    if (current) setActivity(current.activity())
+  }, [])
+
   const syncActivity = useCallback(() => {
     const next = instrument.current?.activity() ?? { activeVoices: 0, sustain, macroValues: preset.macros, lastNote: null }
     setActivity(next)
@@ -89,13 +94,13 @@ export default function App() {
     context.current ??= new AudioContext()
     await context.current.resume()
     if (!instrument.current) {
-      instrument.current = createInstrument(context.current, presetRef.current)
+      instrument.current = createInstrument(context.current, presetRef.current, handleVoiceEnded)
       instrument.current.setSustain(sustainRef.current)
     }
     setAudioReady(true)
     syncActivity()
     return instrument.current
-  }, [syncActivity])
+  }, [handleVoiceEnded, syncActivity])
 
   function choose(next: Patch, remember = true) {
     if (recorder.isRecording()) {
@@ -104,7 +109,7 @@ export default function App() {
     }
     // Compile first. If it fails, the existing instrument remains playable.
     const compiled = compilePatch(next)
-    const replacement = context.current ? createInstrument(context.current, compiled) : null
+    const replacement = context.current ? createInstrument(context.current, compiled, handleVoiceEnded) : null
     replacement?.setSustain(sustainRef.current)
     const prior = instrument.current
     const previousPatch = presetRef.current
@@ -397,7 +402,9 @@ export default function App() {
 
   useEffect(() => () => {
     designAbort.current?.abort()
-    instrument.current?.dispose()
+    const prior = instrument.current
+    instrument.current = null
+    prior?.dispose()
     void context.current?.close()
   }, [])
 

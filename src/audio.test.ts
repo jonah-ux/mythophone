@@ -12,19 +12,32 @@ function schedulingContext() {
     linearRampToValueAtTime(value: number, at: number) { this.calls.push({ kind: 'ramp', value, at }) },
   })
   const filters: Array<{ frequency: ReturnType<typeof parameter> }> = []
+  const oscillators: Array<{ onended: (() => void) | null }> = []
   const node = () => ({ connect(next: unknown) { return next }, disconnect() {}, start() {}, stop() {}, onended: null })
   const context = {
     currentTime: 0, sampleRate: 100, destination: {},
     createBuffer: (_channels: number, length: number) => ({ getChannelData: () => new Float32Array(length) }),
     createGain: () => ({ ...node(), gain: parameter(1) }),
-    createOscillator: () => ({ ...node(), frequency: parameter(440), detune: parameter(0) }),
+    createOscillator: () => { const oscillator = { ...node(), onended: null as (() => void) | null, frequency: parameter(440), detune: parameter(0) }; oscillators.push(oscillator); return oscillator },
     createBufferSource: node,
     createBiquadFilter: () => { const filter = { ...node(), frequency: parameter(350), Q: parameter(1) }; filters.push(filter); return filter },
   }
-  return { context: context as unknown as BaseAudioContext, filters }
+  return { context: context as unknown as BaseAudioContext, filters, oscillators }
 }
 
 describe('audio engine contracts', () => {
+  it('notifies the activity consumer when an asynchronous voice end drains the graph', () => {
+    const { context, oscillators } = schedulingContext()
+    let ended = 0
+    const instrument = createInstrument(context, source[0], () => { ended += 1 })
+    instrument.noteOn(60).release()
+    expect(instrument.activeVoiceCount()).toBe(1)
+    oscillators[0].onended?.()
+    expect(instrument.activeVoiceCount()).toBe(0)
+    expect(ended).toBe(1)
+    instrument.dispose()
+  })
+
   it('bounds rapid voice stealing even while released oscillators have not ended', () => {
     const { context } = schedulingContext()
     const instrument = createInstrument(context, { ...source[0], voiceLimit: 2 })
