@@ -34,6 +34,10 @@ The current patch is never swapped until the replacement has passed `PatchSchema
 
 This release does not claim zero latency, all-browser support, or commercial instrument quality. A broader browser matrix, listened-to audio examples, and a configured provider are part of the next slices.
 
+## Portable performance
+
+`src/recording.ts` stores a bounded `mythophone/performance/v1` event list with note, sustain, and macro events. The recorder uses a monotonic elapsed clock, rejects malformed imports, and caps events and duration. `src/wav.ts` converts the offline `AudioBuffer` into a standard 16-bit PCM RIFF/WAVE blob; no remote sample or browser-specific encoder is needed. Patch changes are retained in a short UI history only after the replacement passes `compilePatch`, and Revert restores the previous compiled patch.
+
 ## Future AI seam
 
 The sound-designer adapter now lives behind a server-side request/response boundary. The browser sends `mythophone/design-request/v1` with a bounded prompt and current patch. The server sends one JSON-only request to an OpenAI-compatible provider, validates `mythophone/design-response/v1`, and applies the scoped-revision guard before returning it. A provider may return only validated patch data and a concise explanation. Provider timeouts, refusals, cancellation, unsupported data, and compile errors leave the current patch and performance state intact. Secrets stay in `MYTHOPHONE_AI_API_KEY` and `MYTHOPHONE_AI_MODEL` on the server; they never become `VITE_` variables, browser-bundled data, exported patches, recordings, screenshots, or committed logs.

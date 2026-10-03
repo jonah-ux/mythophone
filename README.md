@@ -4,7 +4,7 @@
 
 Invent an instrument, inspect its patch, and play it.
 
-**Status: playable engine with an optional sound-designer adapter.** Mythophone has a versioned bounded patch compiler, three authored no-key instruments, expressive macros, sustain-aware voice cleanup, portable patch export/import, a real browser OfflineAudioContext render check, and a server-side provider boundary that fails closed when it is unconfigured.
+**Status: portable playable engine with an optional sound-designer adapter.** Mythophone has a versioned bounded patch compiler, three authored no-key instruments, expressive macros, sustain-aware voice cleanup, portable patch export/import, patch history/revert, compact performance recording, PCM WAV export, a real browser OfflineAudioContext render check, and a server-side provider boundary that fails closed when it is unconfigured.
 
 ## Hear it first
 
@@ -37,6 +37,10 @@ This runs oxlint, TypeScript, focused schema/engine/designer tests, server adapt
 The compiler accepts only bounded oscillator, optional sub-oscillator, white-noise, envelope, filter, macro, gain, and voice-limit data. It rejects incompatible versions, unsupported node types, unknown fields, non-finite values, excessive voices, oversized imports, and arbitrary graph/code payloads before a patch can replace the active instrument. A failed import or future provider response therefore leaves the current instrument playable.
 
 The same compiler and event semantics feed live playback and `renderPerformance`. A render includes note-on/note-off, sustain, and macro events, then measures signal energy and the release tail. The first release uses a short deterministic noise buffer rather than remote samples, and keeps the documented engine limits small enough for an ordinary browser.
+
+## Portable performances
+
+Use **Record performance** while playing notes or moving macros, then stop to capture a validated `mythophone/performance/v1` event list. **Export performance WAV** renders that event list through the same OfflineAudioContext compiler and writes a normal 16-bit PCM RIFF/WAVE file. Patch selections are retained in a short history; **Revert patch** restores the last successfully compiled patch without requesting a model.
 
 ## Configured AI mode
 
