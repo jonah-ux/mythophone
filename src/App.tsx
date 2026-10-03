@@ -70,9 +70,9 @@ export default function App() {
     instrument.current = replacement
     prior?.dispose()
     setPreset(next)
+    setActivity(replacement?.activity() ?? { activeVoices: 0, sustain: false, macroValues: next.macros, lastNote: null })
     setRenderStats(null)
     setMessage(`Prepared instrument: ${next.name}`)
-    syncActivity()
   }
 
   const startVoice = useCallback(async (token: string, note: number, velocity = 0.84) => {
@@ -117,7 +117,8 @@ export default function App() {
     const nextValue = Math.min(Math.max(value, 0), 1)
     setPreset(current => ({ ...current, macros: { ...current.macros, [name]: nextValue } }))
     instrument.current?.setMacro(name, nextValue)
-    syncActivity()
+    if (instrument.current) syncActivity()
+    else setActivity(current => ({ ...current, macroValues: { ...current.macroValues, [name]: nextValue } }))
   }
 
   function save() {
