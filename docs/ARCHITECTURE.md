@@ -36,7 +36,7 @@ This release does not claim zero latency, all-browser support, or commercial ins
 
 ## Portable performance
 
-`src/recording.ts` stores a bounded `mythophone/performance/v1` event list with note, sustain, and macro events. The recorder uses a monotonic elapsed clock, rejects malformed imports, and caps events and duration. `src/wav.ts` converts the offline `AudioBuffer` into a standard 16-bit PCM RIFF/WAVE blob; no remote sample or browser-specific encoder is needed. Patch changes are retained in a short UI history only after the replacement passes `compilePatch`, and Revert restores the previous compiled patch.
+`src/recording.ts` stores a bounded `mythophone/performance/v1` event list with note, sustain, and macro events. The UI starts recording only after the audio context is enabled and supplies `AudioContext.currentTime`; the recorder keeps a monotonic fallback for standalone use and tests. It rejects malformed imports and caps events and duration. `src/wav.ts` converts the offline `AudioBuffer` into a standard 16-bit PCM RIFF/WAVE blob; no remote sample or browser-specific encoder is needed. Patch changes are retained in a short UI history only after the replacement passes `compilePatch`, and Revert restores the previous compiled patch.
 
 ## Future AI seam
 

@@ -23,27 +23,27 @@ export function createPerformanceRecorder(clock: () => number = () => performanc
   let events: PerformanceEvent[] = []
   let stoppedAt = 0
 
-  function start() {
-    startedAt = clock()
+  function start(at = clock()) {
+    startedAt = at
     stoppedAt = 0
     events = []
   }
 
-  function elapsed() {
-    return startedAt === null ? 0 : Math.min(Math.max(clock() - startedAt, 0), MAX_SECONDS)
+  function elapsed(at = clock()) {
+    return startedAt === null ? 0 : Math.min(Math.max(at - startedAt, 0), MAX_SECONDS)
   }
 
-  function push(event: PerformanceEventInput) {
+  function push(event: PerformanceEventInput, at?: number) {
     if (startedAt === null || events.length >= MAX_EVENTS) return false
-    const next = PerformanceEventSchema.parse({ ...event, at: event.at ?? elapsed() })
+    const next = PerformanceEventSchema.parse({ ...event, at: event.at ?? elapsed(at) })
     events.push(next)
     stoppedAt = Math.max(stoppedAt, next.at)
     return true
   }
 
-  function stop() {
+  function stop(at = clock()) {
     if (startedAt === null) return getRecording()
-    stoppedAt = Math.max(stoppedAt, elapsed())
+    stoppedAt = Math.max(stoppedAt, elapsed(at))
     startedAt = null
     return getRecording()
   }

@@ -104,7 +104,7 @@ export default function App() {
       const synth = await enableAudio()
       const voice = synth.noteOn(note, velocity)
       held.current.set(token, voice)
-      recorder.push({ type: 'note-on', note, velocity })
+      recorder.push({ type: 'note-on', note, velocity }, context.current?.currentTime)
       syncActivity()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Audio unavailable')
@@ -114,7 +114,7 @@ export default function App() {
   const endVoice = useCallback((token: string) => {
     const voice = held.current.get(token)
     voice?.release()
-    if (voice) recorder.push({ type: 'note-off', note: voice.note })
+    if (voice) recorder.push({ type: 'note-off', note: voice.note }, context.current?.currentTime)
     held.current.delete(token)
     syncActivity()
   }, [recorder, syncActivity])
@@ -127,7 +127,7 @@ export default function App() {
   function stopAll() {
     instrument.current?.allNotesOff()
     held.current.clear()
-    const currentRecording = recorder.stop()
+    const currentRecording = recorder.stop(context.current?.currentTime)
     if (currentRecording.events.length > 0) setRecording(currentRecording)
     setIsRecording(false)
     setSustain(false)
@@ -138,7 +138,7 @@ export default function App() {
   function changeSustain(next: boolean) {
     setSustain(next)
     instrument.current?.setSustain(next)
-    recorder.push({ type: 'sustain', value: next })
+    recorder.push({ type: 'sustain', value: next }, context.current?.currentTime)
     syncActivity()
     setMessage(next ? 'Sustain held. Release it to finish held voices.' : 'Sustain released.')
   }
@@ -147,7 +147,7 @@ export default function App() {
     const nextValue = Math.min(Math.max(value, 0), 1)
     setPreset(current => ({ ...current, macros: { ...current.macros, [name]: nextValue } }))
     instrument.current?.setMacro(name, nextValue)
-    recorder.push({ type: 'macro', name, value: nextValue })
+    recorder.push({ type: 'macro', name, value: nextValue }, context.current?.currentTime)
     if (instrument.current) syncActivity()
     else setActivity(current => ({ ...current, macroValues: { ...current.macroValues, [name]: nextValue } }))
   }
@@ -217,18 +217,23 @@ export default function App() {
     }
   }
 
-  function toggleRecording() {
+  async function toggleRecording() {
     if (recorder.isRecording()) {
-      const next = recorder.stop()
+      const next = recorder.stop(context.current?.currentTime)
       setRecording(next)
       setIsRecording(false)
       setMessage('Recorded ' + next.events.length + ' performance events.')
       return
     }
-    recorder.start()
-    setRecording(null)
-    setIsRecording(true)
-    setMessage('Recording performance. Play notes, move macros, then stop recording.')
+    try {
+      await enableAudio()
+      recorder.start(context.current?.currentTime)
+      setRecording(null)
+      setIsRecording(true)
+      setMessage('Recording performance on the audio clock. Play notes, move macros, then stop recording.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Audio unavailable')
+    }
   }
 
   function revertPatch() {
