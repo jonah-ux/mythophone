@@ -61,3 +61,20 @@ test('refuses a provider response that changes an undeclared field', async () =>
     globalThis.fetch = previousFetch
   }
 })
+
+test('keeps provider refusal and timeout states explicit', async () => {
+  const previousFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async () => new Response('rate limited', { status: 429 })
+    const refused = await handleDesignRequest(request, { apiKey: 'test-only', model: 'test-only', baseUrl: 'http://provider' })
+    assert.equal(refused.status, 502)
+    assert.equal(refused.body.code, 'provider_refused')
+
+    globalThis.fetch = async () => { throw Object.assign(new Error('aborted'), { name: 'AbortError' }) }
+    const timedOut = await handleDesignRequest(request, { apiKey: 'test-only', model: 'test-only', baseUrl: 'http://provider' })
+    assert.equal(timedOut.status, 504)
+    assert.equal(timedOut.body.code, 'provider_timeout')
+  } finally {
+    globalThis.fetch = previousFetch
+  }
+})
