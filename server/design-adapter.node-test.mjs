@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { once } from 'node:events'
 import source from '../src/presets.json' with { type: 'json' }
-import { handleDesignRequest } from './design-adapter.mjs'
+import { handleDesignRequest, startServer } from './design-adapter.mjs'
 
 const request = {
   schema: 'mythophone/design-request/v1',
@@ -76,5 +77,24 @@ test('keeps provider refusal and timeout states explicit', async () => {
     assert.equal(timedOut.body.code, 'provider_timeout')
   } finally {
     globalThis.fetch = previousFetch
+  }
+})
+
+test('uses the configured browser origin for CORS preflight', async () => {
+  const server = startServer(0, { webOrigin: 'https://mythophone.example' })
+  await once(server, 'listening')
+  try {
+    const address = server.address()
+    assert.ok(address && typeof address === 'object')
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/design`, {
+      method: 'OPTIONS',
+      headers: { origin: 'https://mythophone.example' },
+    })
+    assert.equal(response.status, 204)
+    assert.equal(response.headers.get('access-control-allow-origin'), 'https://mythophone.example')
+  } finally {
+    const closed = once(server, 'close')
+    server.close()
+    await closed
   }
 })
