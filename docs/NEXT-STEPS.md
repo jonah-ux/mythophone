@@ -11,6 +11,7 @@
 - Contract tests for schema rejection, event limits, compiler bounds, finite audio analysis, and prepared-patch distinction.
 - Optional server-side sound-designer adapter with bounded request/response schemas, timeout/cancellation handling, scoped revision validation, and an explicit provider-unconfigured response.
 - Patch history/revert, bounded performance recording, and WAV export through the shared offline compiler.
+- Portable performance bundles that restore a validated patch and timed take before WAV rendering.
 
 ## Remaining release gates
 

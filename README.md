@@ -50,7 +50,7 @@ The performance panel includes a measured sound field. Its accessible label repo
 
 ## Portable performances
 
-Use **Record performance** while playing notes or moving macros, then stop to capture a validated `mythophone/performance/v1` event list. Recording starts after the audio context is enabled and uses the audio clock, so the event timeline matches the same clock used for note scheduling. **Export performance WAV** renders that event list through the same OfflineAudioContext compiler and writes a normal 16-bit PCM RIFF/WAVE file. Patch selections are retained in a short history; **Revert patch** restores the last successfully compiled patch without requesting a model.
+Use **Record performance** while playing notes or moving macros, then stop to capture a validated `mythophone/performance/v1` event list. Recording starts after the audio context is enabled and uses the audio clock, so the event timeline matches the same clock used for note scheduling. **Export portable take** saves a strict `mythophone/performance-bundle/v1` JSON file containing the validated patch and timed performance; **Import portable take** restores both without another model request. **Export performance WAV** renders that restored event list through the same OfflineAudioContext compiler and writes a normal 16-bit PCM RIFF/WAVE file. Patch selections are retained in a short history; **Revert patch** restores the last successfully compiled patch without requesting a model.
 
 ## Configured AI mode
 

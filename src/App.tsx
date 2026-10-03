@@ -11,7 +11,7 @@ import {
 import { exportPatch, importPatch, parsePatch } from './domain'
 import type { Patch } from './domain'
 import { DesignError, requestDesign } from './designer'
-import { createPerformanceRecorder, type PerformanceRecording } from './recording'
+import { createPerformanceRecorder, exportPerformanceBundle, importPerformanceBundle, type PerformanceRecording } from './recording'
 import { downloadWav } from './wav'
 import { compilePatch } from './audio'
 import './App.css'
@@ -57,14 +57,17 @@ export default function App() {
   const [designerStatus, setDesignerStatus] = useState('Prepared patches are available without a provider key.')
   const [patchHistory, setPatchHistory] = useState<Patch[]>([])
   const [recording, setRecording] = useState<PerformanceRecording | null>(null)
+  const [recordingPatch, setRecordingPatch] = useState<Patch | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [exportingWav, setExportingWav] = useState(false)
   const context = useRef<AudioContext | null>(null)
   const instrument = useRef<ReturnType<typeof createInstrument> | null>(null)
   const held = useRef(new Map<string, VoiceHandle>())
   const picker = useRef<HTMLInputElement>(null)
+  const performancePicker = useRef<HTMLInputElement>(null)
   const designAbort = useRef<AbortController | null>(null)
   const [recorder] = useState(() => createPerformanceRecorder())
+  const recordingPatchRef = useRef<Patch | null>(null)
   const fieldStyle = {
     '--energy': String(Math.min(activity.activeVoices / Math.max(preset.voiceLimit, 1), 1)),
     '--brightness': String(activity.macroValues.brightness),
@@ -133,7 +136,10 @@ export default function App() {
     instrument.current?.allNotesOff()
     held.current.clear()
     const currentRecording = recorder.stop(context.current?.currentTime)
-    if (currentRecording.events.length > 0) setRecording(currentRecording)
+    if (currentRecording.events.length > 0) {
+      setRecording(currentRecording)
+      setRecordingPatch(recordingPatchRef.current ?? preset)
+    }
     setIsRecording(false)
     setSustain(false)
     syncActivity()
@@ -226,6 +232,7 @@ export default function App() {
     if (recorder.isRecording()) {
       const next = recorder.stop(context.current?.currentTime)
       setRecording(next)
+      setRecordingPatch(recordingPatchRef.current ?? preset)
       setIsRecording(false)
       setMessage('Recorded ' + next.events.length + ' performance events.')
       return
@@ -233,6 +240,8 @@ export default function App() {
     try {
       await enableAudio()
       recorder.start(context.current?.currentTime)
+      recordingPatchRef.current = preset
+      setRecordingPatch(preset)
       setRecording(null)
       setIsRecording(true)
       setMessage('Recording performance on the audio clock. Play notes, move macros, then stop recording.')
@@ -264,14 +273,48 @@ export default function App() {
     }
     setExportingWav(true)
     try {
-      const result = await renderPerformance(preset, saved.events, { duration: saved.duration + preset.envelope.release + 0.1 })
-      downloadWav(result.buffer, preset.id + '-performance.wav')
-      setMessage('Exported ' + preset.name + ' performance as WAV.')
+      const sourcePatch = recordingPatch ?? preset
+      const result = await renderPerformance(sourcePatch, saved.events, { duration: saved.duration + sourcePatch.envelope.release + 0.1 })
+      downloadWav(result.buffer, sourcePatch.id + '-performance.wav')
+      setMessage('Exported ' + sourcePatch.name + ' performance as WAV.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'WAV export failed')
     } finally {
       setExportingWav(false)
     }
+  }
+
+  function saveRecording() {
+    const saved = recording ?? recorder.getRecording()
+    if (saved.events.length === 0) {
+      setMessage('Record a performance before exporting a portable take.')
+      return
+    }
+    const sourcePatch = recordingPatch ?? preset
+    const url = URL.createObjectURL(new Blob([exportPerformanceBundle(sourcePatch, saved)], { type: 'application/json' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${sourcePatch.id}-performance.mythophone.json`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 0)
+    setMessage(`Exported ${sourcePatch.name} performance and patch bundle.`)
+  }
+
+  async function loadRecording(file?: File) {
+    if (!file) return
+    try {
+      if (recorder.isRecording()) throw new Error('stop recording before importing a performance')
+      const bundle = importPerformanceBundle(await file.text())
+      choose(bundle.patch)
+      recordingPatchRef.current = bundle.patch
+      setRecordingPatch(bundle.patch)
+      setRecording(bundle.recording)
+      setIsRecording(false)
+      setMessage(`Imported ${bundle.recording.events.length} events for ${bundle.patch.name}.`)
+    } catch (error) {
+      setMessage(`Performance import refused: ${error instanceof Error ? error.message : 'invalid performance bundle'}`)
+    }
+    if (performancePicker.current) performancePicker.current.value = ''
   }
 
   useEffect(() => {
@@ -345,7 +388,7 @@ export default function App() {
       {renderStats && <div className="metrics" aria-label="Rendered audio metrics"><div><strong>{renderStats.finite ? 'Finite' : 'Invalid'}</strong><small>samples</small></div><div><strong>{renderStats.peak.toFixed(3)}</strong><small>peak</small></div><div><strong>{renderStats.rms.toFixed(4)}</strong><small>RMS</small></div><div><strong>{formatMetric(renderStats.estimatedFrequency)} Hz</strong><small>zero-crossing estimate</small></div><div><strong>{renderStats.tailRms.toFixed(5)}</strong><small>tail RMS</small></div></div>}
     </section>
 
-    <section className="panel tools-panel"><div className="actions"><button className="secondary" onClick={save}>Export patch</button><button className="secondary" onClick={() => picker.current?.click()}>Import patch</button><button className="secondary" onClick={revertPatch} disabled={patchHistory.length === 0}>Revert patch</button><button className="secondary" onClick={() => { void exportRecordingWav() }} disabled={exportingWav || !(recording?.events.length)}>{exportingWav ? 'Rendering WAV…' : 'Export performance WAV'}</button><input ref={picker} type="file" accept="application/json,.json" hidden onChange={event => { void load(event.target.files?.[0]) }} /></div><details><summary>Inspect patch data</summary><pre>{JSON.stringify(preset, null, 2)}</pre></details>{recording && <details><summary>Inspect recorded events ({recording.events.length})</summary><pre>{JSON.stringify(recording, null, 2)}</pre></details>}</section>
+    <section className="panel tools-panel"><div className="actions"><button className="secondary" onClick={save}>Export patch</button><button className="secondary" onClick={() => picker.current?.click()}>Import patch</button><button className="secondary" onClick={revertPatch} disabled={patchHistory.length === 0}>Revert patch</button><button className="secondary" onClick={saveRecording} disabled={isRecording || !(recording?.events.length)}>Export portable take</button><button className="secondary" onClick={() => performancePicker.current?.click()} disabled={isRecording}>Import portable take</button><button className="secondary" onClick={() => { void exportRecordingWav() }} disabled={exportingWav || isRecording || !(recording?.events.length)}>{exportingWav ? 'Rendering WAV…' : 'Export performance WAV'}</button><input ref={picker} type="file" accept="application/json,.json" hidden onChange={event => { void load(event.target.files?.[0]) }} /><input ref={performancePicker} type="file" accept="application/json,.json" hidden onChange={event => { void loadRecording(event.target.files?.[0]) }} /></div><details><summary>Inspect patch data</summary><pre>{JSON.stringify(preset, null, 2)}</pre></details>{recording && <details><summary>Inspect recorded events ({recording.events.length})</summary><pre>{JSON.stringify(recording, null, 2)}</pre></details>}<p className="tool-hint">Portable takes bundle the validated patch with the timed performance, so another browser can restore the instrument before rendering its WAV.</p></section>
     <footer>Keyboard: A W S E D F T G Y H U J K · pointer keys support press-and-hold · Space is reserved for future recording.</footer>
   </main>
 }
