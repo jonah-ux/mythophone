@@ -9,10 +9,11 @@
 - Portable patch export/import with no model request.
 - Shared live/offline compiler path plus a browser OfflineAudioContext render proof panel.
 - Contract tests for schema rejection, event limits, compiler bounds, finite audio analysis, and prepared-patch distinction.
+- Optional server-side sound-designer adapter with bounded request/response schemas, timeout/cancellation handling, scoped revision validation, and an explicit provider-unconfigured response.
 
 ## Next coherent slices
 
-1. Add a server-side sound-designer adapter that returns validated patches and constrained edits. Keep provider secrets off the client, and preserve the active patch on refusal, timeout, cancellation, or compile failure.
+1. Exercise one configured real provider through the server adapter, then render the returned patch and one scoped edit. Keep the live-provider claim separate from mocked adapter tests.
 2. Add patch history/revert, performance event recording, and WAV export from `renderPerformance`.
 3. Add release-quality browser/audio acceptance, downloadable rendered examples, accessibility and reduced-motion review, and fresh-clone setup evidence.
 

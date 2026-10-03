@@ -4,7 +4,7 @@
 
 Invent an instrument, inspect its patch, and play it.
 
-**Status: playable prepared engine.** Mythophone now has a versioned bounded patch compiler, three authored no-key instruments, expressive macros, sustain-aware voice cleanup, portable patch export/import, and a real browser OfflineAudioContext render check. The live sound-designer adapter is the next vertical slice.
+**Status: playable engine with an optional sound-designer adapter.** Mythophone has a versioned bounded patch compiler, three authored no-key instruments, expressive macros, sustain-aware voice cleanup, portable patch export/import, a real browser OfflineAudioContext render check, and a server-side provider boundary that fails closed when it is unconfigured.
 
 ## Hear it first
 
@@ -23,7 +23,7 @@ No model credentials or private service are required for this mode. The prepared
 npm run verify
 `
 
-This runs oxlint, TypeScript, nine focused schema/engine contract tests, and the production build. The browser render check is additional runtime evidence because a Node unit test or a mocked `AudioContext` cannot prove that a real browser graph produces finite audio.
+This runs oxlint, TypeScript, focused schema/engine/designer tests, server adapter tests, and the production build. The browser render check is additional runtime evidence because a Node unit test or a mocked `AudioContext` cannot prove that a real browser graph produces finite audio.
 
 ## Engine shape
 
@@ -31,10 +31,26 @@ This runs oxlint, TypeScript, nine focused schema/engine contract tests, and the
 - `src/audio.ts` owns `compilePatch`, the live Web Audio graph, voice envelopes, voice stealing, sustain, macro ramps, deterministic noise, offline rendering, and rendered-buffer analysis.
 - `src/presets.json` contains three original prepared patches: a sustained airy texture, a struck noisy decay, and a bright mechanical growl.
 - `src/App.tsx` owns the actual keyboard/pointer performance surface and the visible audio proof metrics.
+- `src/designer.ts` owns the browser request schema, timeout/cancellation handling, response validation, and scoped-revision guard.
+- `server/design-adapter.mjs` owns the optional OpenAI-compatible provider call. Credentials stay in server environment variables and never enter the Vite bundle.
 
 The compiler accepts only bounded oscillator, optional sub-oscillator, white-noise, envelope, filter, macro, gain, and voice-limit data. It rejects incompatible versions, unsupported node types, unknown fields, non-finite values, excessive voices, oversized imports, and arbitrary graph/code payloads before a patch can replace the active instrument. A failed import or future provider response therefore leaves the current instrument playable.
 
 The same compiler and event semantics feed live playback and `renderPerformance`. A render includes note-on/note-off, sustain, and macro events, then measures signal energy and the release tail. The first release uses a short deterministic noise buffer rather than remote samples, and keeps the documented engine limits small enough for an ordinary browser.
+
+## Configured AI mode
+
+Start the local adapter in a second terminal:
+
+`sh
+cp .env.example .env
+# set MYTHOPHONE_AI_API_KEY and MYTHOPHONE_AI_MODEL in the server environment
+npm run api
+`
+
+Then run `npm run dev`, switch the UI from **Prepared** to **Configured AI**, and choose **New instrument** or **Refine current patch**. The browser sends a bounded `mythophone/design-request/v1` payload to `/api/design`. The server asks one OpenAI-compatible provider for JSON, validates `mythophone/design-response/v1`, and refuses any response that changes an undeclared path. A provider refusal, timeout, cancellation, oversized response, invalid graph, or missing configuration leaves the current playable patch in place.
+
+The adapter is provider-shaped but provider-agnostic. This repository does not claim a live provider completion until a real credentialed request has been exercised and its returned patch has been rendered.
 
 ## Portable patches
 
@@ -42,7 +58,7 @@ Use **Export patch** to save a `.mythophone.json` file. Import validates and upg
 
 ## Next slice
 
-The remaining product work is the server-side sound-designer adapter, patch history/revert, performance recording, WAV export, and broader browser/audio acceptance. See [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md) and the complete [build prompt](docs/BUILD-PROMPT.md).
+The remaining product work is patch history/revert, performance recording, WAV export, a credentialed provider canary, and broader browser/audio acceptance. See [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md) and the complete [build prompt](docs/BUILD-PROMPT.md).
 
 ## Provenance and limits
 
