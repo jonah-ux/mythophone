@@ -19,6 +19,6 @@
 2. Run the broader browser/audio matrix on the named release environment and publish through the repository's release owner.
 3. Record deployment/public-hosting state separately from local source and CI evidence.
 
-The repository now contains a GitHub Pages workflow for the prepared no-key build. That workflow is source evidence only until the release owner merges it, GitHub Pages accepts the deployment, and a live URL is read back in the named browser environment.
+The repository now contains a GitHub Pages workflow for the prepared no-key build. The [browser/audio matrix receipt](BROWSER-MATRIX-2026-10-03.md) proves the local runtime at the named head; the Pages workflow remains source evidence only until the release owner merges it, GitHub Pages accepts the deployment, and a live URL is read back in the named browser environment.
 
 The no-key prepared mode remains the honest baseline. A real configured provider must be exercised separately before live AI is described as verified.
