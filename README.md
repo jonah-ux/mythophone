@@ -1,5 +1,7 @@
 # Mythophone
 
+[Source repository](https://github.com/jonah-ux/mythophone)
+
 Invent an instrument, inspect its patch, and play it.
 
 **Status: runnable development starter. Live AI integration and the complete product are still to be built.**
