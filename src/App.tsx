@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import source from './presets.json'
 import {
   createInstrument,
@@ -60,6 +60,12 @@ export default function App() {
   const picker = useRef<HTMLInputElement>(null)
   const designAbort = useRef<AbortController | null>(null)
   const [recorder] = useState(() => createPerformanceRecorder())
+  const fieldStyle = {
+    '--energy': String(Math.min(activity.activeVoices / Math.max(preset.voiceLimit, 1), 1)),
+    '--brightness': String(activity.macroValues.brightness),
+    '--texture': String(activity.macroValues.texture),
+    '--motion': String(activity.macroValues.motion),
+  } as CSSProperties
   const startVoiceRef = useRef<(token: string, note: number, velocity?: number) => Promise<void>>(async () => undefined)
   const endVoiceRef = useRef<(token: string) => void>(() => undefined)
 
@@ -305,6 +311,7 @@ export default function App() {
 
     <section className="panel instrument-panel">
       <div className="section-heading"><div><span className="eyebrow">CHOOSE A MYTH</span><h2>{preset.name}</h2><p>{preset.description}</p></div><span className="voice-meter">{activity.activeVoices}/{preset.voiceLimit} voices</span></div>
+      <div className="sound-field" style={fieldStyle} role="img" aria-label={'Measured sound field: ' + activity.activeVoices + ' active voices, brightness ' + Math.round(activity.macroValues.brightness * 100) + ' percent, texture ' + Math.round(activity.macroValues.texture * 100) + ' percent, motion ' + Math.round(activity.macroValues.motion * 100) + ' percent.'}><span className="sound-field-orb" /><span className="sound-field-ring ring-one" /><span className="sound-field-ring ring-two" /><span className="sound-field-label">{activity.lastNote ? 'Note ' + activity.lastNote : 'Ready'} · measured engine activity</span></div>
       <div className="actions">{presets.map(value => <button key={value.id} className={value.id === preset.id ? 'selected' : 'secondary'} onClick={() => choose(value)}>{value.name}</button>)}</div>
       <div className="engine-line"><span>{preset.oscillator.type} + {preset.subOscillator?.type ?? 'no sub'} + {Math.round(preset.noise.mix * 100)}% air</span><span>{preset.envelope.attack.toFixed(2)}s attack · {preset.envelope.release.toFixed(2)}s release</span></div>
       <button onClick={() => { void enableAudio().then(() => setMessage('Audio ready. Play the keys or your computer keyboard.')).catch(() => setMessage('Audio could not start.')) }}>{audioReady ? 'Audio enabled' : 'Enable audio'}</button>

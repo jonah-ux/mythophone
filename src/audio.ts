@@ -158,13 +158,15 @@ export function createInstrument(context: BaseAudioContext, value: unknown) {
   function noteOnAt(value: unknown, at = context.currentTime, velocity = 1): VoiceHandle {
     if (disposed) throw new Error('instrument disposed')
     const note = NoteSchema.parse(value)
-    if (!Number.isFinite(at) || at < context.currentTime || at > context.currentTime + MAX_RENDER_SECONDS) {
+    const now = context.currentTime
+    if (!Number.isFinite(at) || at < now - 0.05 || at > now + MAX_RENDER_SECONDS) {
       throw new Error('invalid note start time')
     }
+    const startAt = Math.max(at, now)
     if (!Number.isFinite(velocity) || velocity < 0.01 || velocity > 1) throw new Error('invalid note velocity')
     if (voices.size >= patch.voiceLimit) {
       const oldest = voices.values().next().value as InternalVoice | undefined
-      if (oldest) releaseVoice(oldest, at, true)
+      if (oldest) releaseVoice(oldest, startAt, true)
     }
 
     const oscillator = context.createOscillator()
@@ -181,42 +183,42 @@ export function createInstrument(context: BaseAudioContext, value: unknown) {
     const id = nextVoiceId++
 
     oscillator.type = patch.oscillator.type
-    oscillator.frequency.setValueAtTime(frequency * 2 ** patch.oscillator.octave, at)
-    oscillator.detune.setValueAtTime(patch.oscillator.detune, at)
-    oscillatorGain.gain.setValueAtTime(patch.oscillator.mix, at)
+    oscillator.frequency.setValueAtTime(frequency * 2 ** patch.oscillator.octave, startAt)
+    oscillator.detune.setValueAtTime(patch.oscillator.detune, startAt)
+    oscillatorGain.gain.setValueAtTime(patch.oscillator.mix, startAt)
     oscillator.connect(oscillatorGain).connect(filter)
 
     if (subOscillator && subGain && patch.subOscillator) {
       subOscillator.type = patch.subOscillator.type
-      subOscillator.frequency.setValueAtTime(frequency * 2 ** patch.subOscillator.octave, at)
-      subOscillator.detune.setValueAtTime(patch.subOscillator.detune, at)
-      subGain.gain.setValueAtTime(patch.subOscillator.mix, at)
+      subOscillator.frequency.setValueAtTime(frequency * 2 ** patch.subOscillator.octave, startAt)
+      subOscillator.detune.setValueAtTime(patch.subOscillator.detune, startAt)
+      subGain.gain.setValueAtTime(patch.subOscillator.mix, startAt)
       subOscillator.connect(subGain).connect(filter)
     }
 
     noiseSource.buffer = noiseBuffer
     noiseSource.loop = true
-    noiseGain.gain.setValueAtTime(macroNoiseGain(patch, macros.texture), at)
+    noiseGain.gain.setValueAtTime(macroNoiseGain(patch, macros.texture), startAt)
     noiseSource.connect(noiseGain).connect(filter)
     filter.type = patch.filter.type
-    filter.frequency.setValueAtTime(macroFilterCutoff(patch, macros.brightness), at)
-    filter.Q.setValueAtTime(patch.filter.resonance, at)
+    filter.frequency.setValueAtTime(macroFilterCutoff(patch, macros.brightness), startAt)
+    filter.Q.setValueAtTime(patch.filter.resonance, startAt)
 
-    envelope.gain.setValueAtTime(0, at)
-    envelope.gain.linearRampToValueAtTime(patch.envelope.level * velocity, at + patch.envelope.attack)
-    envelope.gain.linearRampToValueAtTime(patch.envelope.level * velocity * patch.envelope.sustain, at + patch.envelope.attack + patch.envelope.decay)
+    envelope.gain.setValueAtTime(0, startAt)
+    envelope.gain.linearRampToValueAtTime(patch.envelope.level * velocity, startAt + patch.envelope.attack)
+    envelope.gain.linearRampToValueAtTime(patch.envelope.level * velocity * patch.envelope.sustain, startAt + patch.envelope.attack + patch.envelope.decay)
     filter.connect(envelope).connect(master)
 
     lfo.type = 'sine'
-    lfo.frequency.setValueAtTime(2.5 + macros.motion * 8, at)
-    lfoGain.gain.setValueAtTime(macros.motion * 26, at)
+    lfo.frequency.setValueAtTime(2.5 + macros.motion * 8, startAt)
+    lfoGain.gain.setValueAtTime(macros.motion * 26, startAt)
     lfo.connect(lfoGain).connect(oscillator.detune)
     if (subOscillator) lfoGain.connect(subOscillator.detune)
 
     const voice: InternalVoice = {
       id,
       note,
-      start: at,
+      start: startAt,
       velocity,
       released: false,
       keyUpPending: false,
@@ -236,10 +238,10 @@ export function createInstrument(context: BaseAudioContext, value: unknown) {
     voices.set(id, voice)
     lastNote = note
     oscillator.onended = () => removeVoice(voice)
-    oscillator.start(at)
-    subOscillator?.start(at)
-    noiseSource.start(at)
-    lfo.start(at)
+    oscillator.start(startAt)
+    subOscillator?.start(startAt)
+    noiseSource.start(startAt)
+    lfo.start(startAt)
     return voice
   }
 
