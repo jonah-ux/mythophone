@@ -4,6 +4,7 @@ import { z } from 'zod'
 const MAX_BODY_BYTES = 16 * 1024
 const MAX_PROVIDER_BYTES = 32 * 1024
 const REQUEST_TIMEOUT_MS = 15_000
+const DEFAULT_WEB_ORIGIN = 'http://127.0.0.1:5175'
 
 const bounded = (min, max) => z.number().finite().min(min).max(max)
 const OscillatorSchema = z.object({
@@ -74,12 +75,12 @@ function assertScopedRevision(previous, next, changedPaths) {
   }
 }
 
-function jsonResponse(res, status, body) {
+function jsonResponse(res, status, body, webOrigin) {
   const payload = JSON.stringify(body)
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
-    'access-control-allow-origin': 'http://127.0.0.1:5175',
+    'access-control-allow-origin': webOrigin,
     'access-control-allow-headers': 'content-type',
   })
   res.end(payload)
@@ -184,25 +185,30 @@ export async function handleDesignRequest(raw, config = {
   }
 }
 
-export function startServer(port = Number(process.env.MYTHOPHONE_API_PORT || 8787)) {
+export function startServer(port = Number(process.env.MYTHOPHONE_API_PORT || 8787), options = {}) {
+  const webOrigin = options.webOrigin || process.env.MYTHOPHONE_WEB_ORIGIN || DEFAULT_WEB_ORIGIN
   const server = createServer(async (req, res) => {
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, { 'access-control-allow-origin': 'http://127.0.0.1:5175', 'access-control-allow-headers': 'content-type' })
+      res.writeHead(204, { 'access-control-allow-origin': webOrigin, 'access-control-allow-headers': 'content-type' })
       res.end()
       return
     }
     if (req.method !== 'POST' || req.url !== '/api/design') {
-      jsonResponse(res, 404, errorBody('unknown', 'route not found'))
+      jsonResponse(res, 404, errorBody('unknown', 'route not found'), webOrigin)
       return
     }
     try {
       const result = await handleDesignRequest(await readBody(req))
-      jsonResponse(res, result.status, result.body)
+      jsonResponse(res, result.status, result.body, webOrigin)
     } catch (error) {
-      jsonResponse(res, error?.code === 'request_too_large' ? 413 : 400, errorBody(error?.code === 'request_too_large' ? 'request_too_large' : 'request_invalid', error instanceof Error ? error.message : 'request failed'))
+      jsonResponse(res, error?.code === 'request_too_large' ? 413 : 400, errorBody(error?.code === 'request_too_large' ? 'request_too_large' : 'request_invalid', error instanceof Error ? error.message : 'request failed'), webOrigin)
     }
   })
-  server.listen(port, '127.0.0.1', () => console.log('Mythophone sound designer API listening on http://127.0.0.1:' + port))
+  server.listen(port, '127.0.0.1', () => {
+    const address = server.address()
+    const actualPort = address && typeof address === 'object' ? address.port : port
+    console.log('Mythophone sound designer API listening on http://127.0.0.1:' + actualPort)
+  })
   return server
 }
 

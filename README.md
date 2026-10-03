@@ -61,6 +61,7 @@ Start the local adapter in a second terminal:
 `sh
 cp .env.example .env
 # set MYTHOPHONE_AI_API_KEY and MYTHOPHONE_AI_MODEL in the server environment
+# set MYTHOPHONE_WEB_ORIGIN when the browser is hosted on a different origin
 npm run api
 `
 
