@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import source from './presets.json'
 import {
   createInstrument,
@@ -60,6 +60,12 @@ export default function App() {
   const picker = useRef<HTMLInputElement>(null)
   const designAbort = useRef<AbortController | null>(null)
   const [recorder] = useState(() => createPerformanceRecorder())
+  const fieldStyle = {
+    '--energy': String(Math.min(activity.activeVoices / Math.max(preset.voiceLimit, 1), 1)),
+    '--brightness': String(activity.macroValues.brightness),
+    '--texture': String(activity.macroValues.texture),
+    '--motion': String(activity.macroValues.motion),
+  } as CSSProperties
   const startVoiceRef = useRef<(token: string, note: number, velocity?: number) => Promise<void>>(async () => undefined)
   const endVoiceRef = useRef<(token: string) => void>(() => undefined)
 
@@ -98,7 +104,7 @@ export default function App() {
       const synth = await enableAudio()
       const voice = synth.noteOn(note, velocity)
       held.current.set(token, voice)
-      recorder.push({ type: 'note-on', note, velocity })
+      recorder.push({ type: 'note-on', note, velocity }, context.current?.currentTime)
       syncActivity()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Audio unavailable')
@@ -108,7 +114,7 @@ export default function App() {
   const endVoice = useCallback((token: string) => {
     const voice = held.current.get(token)
     voice?.release()
-    if (voice) recorder.push({ type: 'note-off', note: voice.note })
+    if (voice) recorder.push({ type: 'note-off', note: voice.note }, context.current?.currentTime)
     held.current.delete(token)
     syncActivity()
   }, [recorder, syncActivity])
@@ -121,7 +127,7 @@ export default function App() {
   function stopAll() {
     instrument.current?.allNotesOff()
     held.current.clear()
-    const currentRecording = recorder.stop()
+    const currentRecording = recorder.stop(context.current?.currentTime)
     if (currentRecording.events.length > 0) setRecording(currentRecording)
     setIsRecording(false)
     setSustain(false)
@@ -132,7 +138,7 @@ export default function App() {
   function changeSustain(next: boolean) {
     setSustain(next)
     instrument.current?.setSustain(next)
-    recorder.push({ type: 'sustain', value: next })
+    recorder.push({ type: 'sustain', value: next }, context.current?.currentTime)
     syncActivity()
     setMessage(next ? 'Sustain held. Release it to finish held voices.' : 'Sustain released.')
   }
@@ -141,7 +147,7 @@ export default function App() {
     const nextValue = Math.min(Math.max(value, 0), 1)
     setPreset(current => ({ ...current, macros: { ...current.macros, [name]: nextValue } }))
     instrument.current?.setMacro(name, nextValue)
-    recorder.push({ type: 'macro', name, value: nextValue })
+    recorder.push({ type: 'macro', name, value: nextValue }, context.current?.currentTime)
     if (instrument.current) syncActivity()
     else setActivity(current => ({ ...current, macroValues: { ...current.macroValues, [name]: nextValue } }))
   }
@@ -211,18 +217,23 @@ export default function App() {
     }
   }
 
-  function toggleRecording() {
+  async function toggleRecording() {
     if (recorder.isRecording()) {
-      const next = recorder.stop()
+      const next = recorder.stop(context.current?.currentTime)
       setRecording(next)
       setIsRecording(false)
       setMessage('Recorded ' + next.events.length + ' performance events.')
       return
     }
-    recorder.start()
-    setRecording(null)
-    setIsRecording(true)
-    setMessage('Recording performance. Play notes, move macros, then stop recording.')
+    try {
+      await enableAudio()
+      recorder.start(context.current?.currentTime)
+      setRecording(null)
+      setIsRecording(true)
+      setMessage('Recording performance on the audio clock. Play notes, move macros, then stop recording.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Audio unavailable')
+    }
   }
 
   function revertPatch() {
@@ -305,6 +316,7 @@ export default function App() {
 
     <section className="panel instrument-panel">
       <div className="section-heading"><div><span className="eyebrow">CHOOSE A MYTH</span><h2>{preset.name}</h2><p>{preset.description}</p></div><span className="voice-meter">{activity.activeVoices}/{preset.voiceLimit} voices</span></div>
+      <div className="sound-field" style={fieldStyle} role="img" aria-label={'Measured sound field: ' + activity.activeVoices + ' active voices, brightness ' + Math.round(activity.macroValues.brightness * 100) + ' percent, texture ' + Math.round(activity.macroValues.texture * 100) + ' percent, motion ' + Math.round(activity.macroValues.motion * 100) + ' percent.'}><span className="sound-field-orb" /><span className="sound-field-ring ring-one" /><span className="sound-field-ring ring-two" /><span className="sound-field-label">{activity.lastNote ? 'Note ' + activity.lastNote : 'Ready'} · measured engine activity</span></div>
       <div className="actions">{presets.map(value => <button key={value.id} className={value.id === preset.id ? 'selected' : 'secondary'} onClick={() => choose(value)}>{value.name}</button>)}</div>
       <div className="engine-line"><span>{preset.oscillator.type} + {preset.subOscillator?.type ?? 'no sub'} + {Math.round(preset.noise.mix * 100)}% air</span><span>{preset.envelope.attack.toFixed(2)}s attack · {preset.envelope.release.toFixed(2)}s release</span></div>
       <button onClick={() => { void enableAudio().then(() => setMessage('Audio ready. Play the keys or your computer keyboard.')).catch(() => setMessage('Audio could not start.')) }}>{audioReady ? 'Audio enabled' : 'Enable audio'}</button>

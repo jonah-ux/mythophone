@@ -17,6 +17,14 @@ Open http://127.0.0.1:5175, press **Enable audio**, and hold the on-screen keys 
 
 No model credentials or private service are required for this mode. The prepared patches are labeled as prepared; they are not represented as fresh model output.
 
+### Prepared audio examples
+
+These short mono PCM/WAV examples were rendered from the prepared patches through the browser's offline path and checked as finite files. They are included as inspectable artifacts; this run measured them but did not perform a listening review.
+
+- [Rain cello demo](public/audio/rain-cello-demo.wav) · 2.433 seconds at 44.1 kHz
+- [Sand bell demo](public/audio/sand-bell-demo.wav) · 1.989 seconds at 44.1 kHz
+- [Mechanical dragon demo](public/audio/mechanical-dragon-demo.wav) · 0.939 seconds at 44.1 kHz
+
 ## Checks
 
 `sh
@@ -38,9 +46,11 @@ The compiler accepts only bounded oscillator, optional sub-oscillator, white-noi
 
 The same compiler and event semantics feed live playback and `renderPerformance`. A render includes note-on/note-off, sustain, and macro events, then measures signal energy and the release tail. The first release uses a short deterministic noise buffer rather than remote samples, and keeps the documented engine limits small enough for an ordinary browser.
 
+The performance panel includes a measured sound field. Its accessible label reports active voice count and current macro values; the visual orb and rings use those same engine readings, so the visual layer stays tied to actual performance state rather than pretending to be an audio waveform.
+
 ## Portable performances
 
-Use **Record performance** while playing notes or moving macros, then stop to capture a validated `mythophone/performance/v1` event list. **Export performance WAV** renders that event list through the same OfflineAudioContext compiler and writes a normal 16-bit PCM RIFF/WAVE file. Patch selections are retained in a short history; **Revert patch** restores the last successfully compiled patch without requesting a model.
+Use **Record performance** while playing notes or moving macros, then stop to capture a validated `mythophone/performance/v1` event list. Recording starts after the audio context is enabled and uses the audio clock, so the event timeline matches the same clock used for note scheduling. **Export performance WAV** renders that event list through the same OfflineAudioContext compiler and writes a normal 16-bit PCM RIFF/WAVE file. Patch selections are retained in a short history; **Revert patch** restores the last successfully compiled patch without requesting a model.
 
 ## Configured AI mode
 
