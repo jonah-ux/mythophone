@@ -1,0 +1,5 @@
+[
+  {"schema": "mythophone/preset/v1", "id": "glass-bell", "name": "Glass bell", "oscillator": "sine", "gain": 0.1, "cutoff": 6000, "attack": 0.008, "release": 1.4},
+  {"schema": "mythophone/preset/v1", "id": "soft-reed", "name": "Soft reed", "oscillator": "triangle", "gain": 0.09, "cutoff": 1800, "attack": 0.12, "release": 0.35},
+  {"schema": "mythophone/preset/v1", "id": "electric-thread", "name": "Electric thread", "oscillator": "sawtooth", "gain": 0.075, "cutoff": 900, "attack": 0.025, "release": 0.15}
+]
