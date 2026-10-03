@@ -1,0 +1,41 @@
+{
+  "schema": "mythophone/patch/v1",
+  "id": "mechanical-dragon",
+  "name": "Mechanical dragon",
+  "description": "A playful square-metal growl with a bite of motion for expressive roars.",
+  "oscillator": {
+    "type": "square",
+    "mix": 0.7,
+    "detune": 0,
+    "octave": 0
+  },
+  "subOscillator": {
+    "type": "sawtooth",
+    "mix": 0.32,
+    "detune": -9,
+    "octave": -1
+  },
+  "noise": {
+    "mix": 0.2,
+    "color": "white"
+  },
+  "envelope": {
+    "level": 0.078,
+    "attack": 0.012,
+    "decay": 0.16,
+    "sustain": 0.58,
+    "release": 0.3
+  },
+  "filter": {
+    "type": "lowpass",
+    "cutoff": 1450,
+    "resonance": 8.5
+  },
+  "masterGain": 0.66,
+  "voiceLimit": 8,
+  "macros": {
+    "brightness": 0.38,
+    "texture": 0.42,
+    "motion": 0.74
+  }
+}

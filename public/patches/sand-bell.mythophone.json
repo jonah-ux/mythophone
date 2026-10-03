@@ -1,0 +1,41 @@
+{
+  "schema": "mythophone/patch/v1",
+  "id": "sand-bell",
+  "name": "Sand bell",
+  "description": "A struck glass tone that sheds its sparkle into a dry, noisy tail.",
+  "oscillator": {
+    "type": "sine",
+    "mix": 0.92,
+    "detune": 0,
+    "octave": 0
+  },
+  "subOscillator": {
+    "type": "sine",
+    "mix": 0.25,
+    "detune": 7,
+    "octave": 1
+  },
+  "noise": {
+    "mix": 0.36,
+    "color": "white"
+  },
+  "envelope": {
+    "level": 0.1,
+    "attack": 0.006,
+    "decay": 0.62,
+    "sustain": 0.14,
+    "release": 1.35
+  },
+  "filter": {
+    "type": "bandpass",
+    "cutoff": 5800,
+    "resonance": 4.8
+  },
+  "masterGain": 0.68,
+  "voiceLimit": 10,
+  "macros": {
+    "brightness": 0.68,
+    "texture": 0.62,
+    "motion": 0.05
+  }
+}
