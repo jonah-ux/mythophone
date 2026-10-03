@@ -10,6 +10,7 @@ This checklist keeps the first release's source, local runtime, provider, and pu
 - Patch export/import, short patch history/revert, validated performance events, and PCM WAV export are available without a provider request.
 - Portable take export/import bundles the validated patch with its timed performance before offline WAV rendering.
 - All-notes-off and focus loss close an active recording with terminal note-off events before releasing voices.
+- Patch selection, patch import, AI application, and Revert are held while recording so a portable take retains one patch identity.
 - Configured AI mode is visibly separate and returns an explicit `provider_unconfigured` failure when server configuration is absent; the current patch remains playable after that failure.
 - Reduced-motion preferences remove the keyboard press transform and shorten any future CSS animation/transition duration.
 - The measured sound field exposes active voices and macro values through an accessible label and responds to live note activity.
