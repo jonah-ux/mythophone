@@ -67,6 +67,8 @@ export default function App() {
   const performancePicker = useRef<HTMLInputElement>(null)
   const designAbort = useRef<AbortController | null>(null)
   const [recorder] = useState(() => createPerformanceRecorder())
+  const recorderRef = useRef(recorder)
+  const finishRecordingRef = useRef<(at?: number) => void>(() => undefined)
   const recordingPatchRef = useRef<Patch | null>(null)
   const fieldStyle = {
     '--energy': String(Math.min(activity.activeVoices / Math.max(preset.voiceLimit, 1), 1)),
@@ -132,15 +134,28 @@ export default function App() {
     endVoiceRef.current = endVoice
   }, [startVoice, endVoice])
 
-  function stopAll() {
-    instrument.current?.allNotesOff()
-    held.current.clear()
-    const currentRecording = recorder.stop(context.current?.currentTime)
+  const finishRecording = useCallback((at?: number) => {
+    const currentRecording = recorder.stop(at)
     if (currentRecording.events.length > 0) {
       setRecording(currentRecording)
       setRecordingPatch(recordingPatchRef.current ?? preset)
     }
     setIsRecording(false)
+  }, [preset, recorder])
+  useEffect(() => {
+    finishRecordingRef.current = finishRecording
+  }, [finishRecording])
+
+  function stopAll() {
+    const at = context.current?.currentTime
+    if (recorder.isRecording()) {
+      const active = instrument.current?.activity()
+      if (active?.sustain) recorder.push({ type: 'sustain', value: false }, at)
+      for (const voice of held.current.values()) recorder.push({ type: 'note-off', note: voice.note }, at)
+    }
+    instrument.current?.allNotesOff()
+    held.current.clear()
+    finishRecording(at)
     setSustain(false)
     syncActivity()
     setMessage('All voices released.')
@@ -320,8 +335,15 @@ export default function App() {
   useEffect(() => {
     const active = held.current
     const stop = () => {
+      const at = context.current?.currentTime
+      if (recorderRef.current.isRecording()) {
+        const current = instrument.current?.activity()
+        if (current?.sustain) recorderRef.current.push({ type: 'sustain', value: false }, at)
+        for (const voice of active.values()) recorderRef.current.push({ type: 'note-off', note: voice.note }, at)
+      }
       instrument.current?.allNotesOff()
       active.clear()
+      finishRecordingRef.current(at)
       setSustain(false)
       setActivity(instrument.current?.activity() ?? { activeVoices: 0, sustain: false, macroValues: presets[0].macros, lastNote: null })
     }
