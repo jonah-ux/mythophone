@@ -74,7 +74,7 @@ Use **Export patch** to save a `.mythophone.json` file. Import validates and upg
 
 ## Release path
 
-The playable, portable, and measured no-key path is implemented. The remaining release gate is a credentialed provider canary plus the broader browser/audio matrix and release-owner publication. See [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md), [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md), and the complete [build prompt](docs/BUILD-PROMPT.md).
+The playable, portable, and measured no-key path is implemented. The repository includes a GitHub Pages workflow for publishing that prepared static build; the workflow is source evidence until it is merged, enabled, deployed, and read back at a live URL. A Pages build does not provide `/api/design`; configured AI still needs a separately deployed server adapter and provider credentials. The remaining release gate is a credentialed provider canary plus the broader browser/audio matrix and release-owner publication. See [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md), [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md), and the complete [build prompt](docs/BUILD-PROMPT.md).
 
 ## Provenance and limits
 
