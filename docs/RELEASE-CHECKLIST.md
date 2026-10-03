@@ -13,6 +13,7 @@ This checklist keeps the first release's source, local runtime, provider, and pu
 - Patch selection, patch import, AI application, and Revert are held while recording so a portable take retains one patch identity.
 - Provider refusal, timeout/abort, unconfigured state, invalid output, and caller cancellation have explicit contract coverage without requiring credentials.
 - The adapter's browser origin is configurable for a separately deployed frontend; the default remains the local Vite origin and the CORS preflight contract is tested.
+- Browser-origin configuration rejects wildcard, credential-bearing, non-HTTP, and malformed values before the adapter starts serving.
 - The dated [browser/audio matrix receipt](BROWSER-MATRIX-2026-10-03.md) records desktop, 390px mobile, browser WAV playback, OfflineAudioContext metrics, portable-take finalization, patch-identity protection, and provider-unconfigured behavior at the reviewed head.
 - Configured AI mode is visibly separate and returns an explicit `provider_unconfigured` failure when server configuration is absent; the current patch remains playable after that failure.
 - Reduced-motion preferences remove the keyboard press transform and shorten any future CSS animation/transition duration.

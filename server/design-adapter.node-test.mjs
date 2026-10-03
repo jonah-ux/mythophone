@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import source from '../src/presets.json' with { type: 'json' }
-import { handleDesignRequest, startServer } from './design-adapter.mjs'
+import { handleDesignRequest, normalizeWebOrigin, startServer } from './design-adapter.mjs'
 
 const request = {
   schema: 'mythophone/design-request/v1',
@@ -97,4 +97,12 @@ test('uses the configured browser origin for CORS preflight', async () => {
     server.close()
     await closed
   }
+})
+
+test('rejects unsafe or malformed browser origins before serving', () => {
+  assert.equal(normalizeWebOrigin('https://mythophone.example/app'), 'https://mythophone.example')
+  assert.throws(() => normalizeWebOrigin('*'), /wildcard/)
+  assert.throws(() => normalizeWebOrigin('ftp://mythophone.example'), /http\(s\)/)
+  assert.throws(() => normalizeWebOrigin('https://user:pass@mythophone.example'), /http\(s\)/)
+  assert.throws(() => normalizeWebOrigin('not-an-origin'), /http\(s\)/)
 })
