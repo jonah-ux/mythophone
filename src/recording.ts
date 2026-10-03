@@ -1,15 +1,35 @@
-import { PerformanceEventSchema } from './domain'
-import type { PerformanceEvent } from './domain'
+import { z } from 'zod'
+import { PatchSchema, PerformanceEventSchema } from './domain'
+import type { Patch, PerformanceEvent } from './domain'
 
 type MacroName = 'brightness' | 'texture' | 'motion'
 
 const MAX_EVENTS = 1024
 const MAX_SECONDS = 600
+const MAX_RECORDING_BYTES = 256 * 1024
+
+const PerformanceRecordingSchema = z.object({
+  schema: z.literal('mythophone/performance/v1'),
+  events: z.array(PerformanceEventSchema).max(MAX_EVENTS),
+  duration: z.number().finite().min(0.4).max(MAX_SECONDS),
+}).strict()
+
+const PerformanceBundleSchema = z.object({
+  schema: z.literal('mythophone/performance-bundle/v1'),
+  patch: PatchSchema,
+  recording: PerformanceRecordingSchema,
+}).strict()
 
 export type PerformanceRecording = {
   schema: 'mythophone/performance/v1'
   events: PerformanceEvent[]
   duration: number
+}
+
+export type PerformanceBundle = {
+  schema: 'mythophone/performance-bundle/v1'
+  patch: Patch
+  recording: PerformanceRecording
 }
 
 export type PerformanceEventInput =
@@ -68,18 +88,45 @@ export function createPerformanceRecorder(clock: () => number = () => performanc
 }
 
 export function parseRecording(value: unknown): PerformanceRecording {
-  if (!value || typeof value !== 'object') throw new Error('performance recording must be an object')
-  const candidate = value as Record<string, unknown>
-  if (candidate.schema !== 'mythophone/performance/v1') throw new Error('unsupported performance recording version')
-  if (!Array.isArray(candidate.events) || candidate.events.length > MAX_EVENTS) throw new Error('performance event limit exceeded')
-  const events = candidate.events.map(event => PerformanceEventSchema.parse(event)).sort((left, right) => left.at - right.at)
-  const duration = Number(candidate.duration)
-  if (!Number.isFinite(duration) || duration < 0.4 || duration > MAX_SECONDS) throw new Error('invalid performance duration')
-  return { schema: 'mythophone/performance/v1', events, duration }
+  const parsed = PerformanceRecordingSchema.parse(value)
+  return { schema: parsed.schema, events: [...parsed.events].sort((left, right) => left.at - right.at), duration: parsed.duration }
 }
 
 export function exportRecording(value: unknown) {
   return JSON.stringify(parseRecording(value), null, 2)
 }
 
-export const RECORDING_LIMITS = { maxEvents: MAX_EVENTS, maxSeconds: MAX_SECONDS }
+export function importRecording(raw: string) {
+  if (new TextEncoder().encode(raw).byteLength > MAX_RECORDING_BYTES) throw new Error('performance recording exceeds 256 KiB size limit')
+  try {
+    return parseRecording(JSON.parse(raw))
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error('performance recording was not JSON')
+    throw error
+  }
+}
+
+export function parsePerformanceBundle(value: unknown): PerformanceBundle {
+  const parsed = PerformanceBundleSchema.parse(value)
+  return {
+    schema: parsed.schema,
+    patch: parsed.patch,
+    recording: { schema: parsed.recording.schema, events: [...parsed.recording.events].sort((left, right) => left.at - right.at), duration: parsed.recording.duration },
+  }
+}
+
+export function exportPerformanceBundle(patch: unknown, recording: unknown) {
+  return JSON.stringify(parsePerformanceBundle({ schema: 'mythophone/performance-bundle/v1', patch, recording }), null, 2)
+}
+
+export function importPerformanceBundle(raw: string) {
+  if (new TextEncoder().encode(raw).byteLength > MAX_RECORDING_BYTES) throw new Error('performance bundle exceeds 256 KiB size limit')
+  try {
+    return parsePerformanceBundle(JSON.parse(raw))
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error('performance bundle was not JSON')
+    throw error
+  }
+}
+
+export const RECORDING_LIMITS = { maxEvents: MAX_EVENTS, maxSeconds: MAX_SECONDS, maxBytes: MAX_RECORDING_BYTES }
