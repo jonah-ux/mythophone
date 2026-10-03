@@ -10,6 +10,7 @@ import {
 } from './audio'
 import { exportPatch, importPatch, parsePatch } from './domain'
 import type { Patch } from './domain'
+import { DesignError, requestDesign } from './designer'
 import './App.css'
 
 const presets = source.map(value => parsePatch(value))
@@ -41,10 +42,16 @@ export default function App() {
   const [message, setMessage] = useState('Enable audio, then play with A W S E D F T G Y H U J K.')
   const [rendering, setRendering] = useState(false)
   const [renderStats, setRenderStats] = useState<RenderedAudioAnalysis | null>(null)
+  const [designMode, setDesignMode] = useState<'prepared' | 'configured'>('prepared')
+  const [designRequestMode, setDesignRequestMode] = useState<'generate' | 'edit'>('generate')
+  const [designPrompt, setDesignPrompt] = useState('A cello made of rain.')
+  const [designing, setDesigning] = useState(false)
+  const [designerStatus, setDesignerStatus] = useState('Prepared patches are available without a provider key.')
   const context = useRef<AudioContext | null>(null)
   const instrument = useRef<ReturnType<typeof createInstrument> | null>(null)
   const held = useRef(new Map<string, VoiceHandle>())
   const picker = useRef<HTMLInputElement>(null)
+  const designAbort = useRef<AbortController | null>(null)
   const startVoiceRef = useRef<(token: string, note: number, velocity?: number) => Promise<void>>(async () => undefined)
   const endVoiceRef = useRef<(token: string) => void>(() => undefined)
 
@@ -121,6 +128,27 @@ export default function App() {
     else setActivity(current => ({ ...current, macroValues: { ...current.macroValues, [name]: nextValue } }))
   }
 
+  async function runDesign() {
+    designAbort.current?.abort()
+    const controller = new AbortController()
+    designAbort.current = controller
+    setDesigning(true)
+    setDesignerStatus('Sending a bounded request to the server-side sound designer…')
+    try {
+      const result = await requestDesign(designRequestMode, designPrompt, preset, { signal: controller.signal })
+      choose(result.patch)
+      setMessage('AI interpretation: ' + result.explanation)
+      setDesignerStatus('Validated patch applied. Changed: ' + (result.changedPaths.join(', ') || 'none declared') + '.')
+    } catch (error) {
+      const code = error instanceof DesignError ? error.code : 'provider_refused'
+      setDesignerStatus('AI request failed (' + code + '); the current instrument is still playable.')
+      setMessage(error instanceof Error ? error.message : 'Sound designer unavailable')
+    } finally {
+      if (designAbort.current === controller) designAbort.current = null
+      setDesigning(false)
+    }
+  }
+
   function save() {
     const url = URL.createObjectURL(new Blob([exportPatch(preset)], { type: 'application/json' }))
     const link = document.createElement('a')
@@ -192,6 +220,7 @@ export default function App() {
   }, [])
 
   useEffect(() => () => {
+    designAbort.current?.abort()
     instrument.current?.dispose()
     void context.current?.close()
   }, [])
@@ -202,7 +231,12 @@ export default function App() {
       <h1>Find a sound. Make it yours.</h1>
       <p>Describe a myth, inspect the bounded patch, then perform it with your hands.</p>
     </header>
-    <div className="status"><strong>Prepared mode</strong> · no key required · patch compiler validates every graph before it can replace the active sound</div>
+    <div className="status"><strong>{designMode === 'prepared' ? 'Prepared mode' : 'Configured AI mode'}</strong> · {designMode === 'prepared' ? 'no key required; these patches are authored examples' : 'provider is optional; keys stay on the server'} · patch compiler validates every graph before it can replace the active sound</div>
+
+    <section className="panel designer-panel">
+      <div className="section-heading"><div><span className="eyebrow">DESCRIBE A MYTH</span><h2>Sound designer</h2><p>{designMode === 'prepared' ? 'Try the no-key instruments first, then opt into a configured provider when you are ready.' : 'The browser sends only a bounded prompt and current patch to /api/design. Provider output is validated before it can replace the active instrument.'}</p></div><div className="mode-actions"><button className={designMode === 'prepared' ? 'selected' : 'secondary'} onClick={() => setDesignMode('prepared')}>Prepared</button><button className={designMode === 'configured' ? 'selected' : 'secondary'} onClick={() => setDesignMode('configured')}>Configured AI</button></div></div>
+      {designMode === 'configured' && <><div className="designer-controls"><div className="request-mode"><button className={designRequestMode === 'generate' ? 'selected' : 'secondary'} onClick={() => setDesignRequestMode('generate')}>New instrument</button><button className={designRequestMode === 'edit' ? 'selected' : 'secondary'} onClick={() => setDesignRequestMode('edit')}>Refine current patch</button></div><label className="prompt-field"><span>Direction</span><textarea aria-label="Sound design direction" value={designPrompt} maxLength={240} onChange={event => setDesignPrompt(event.target.value)} /></label><button onClick={() => { void runDesign() }} disabled={designing || designPrompt.trim().length < 3}>{designing ? 'Designing…' : 'Ask sound designer'}</button></div><p role="status" className="designer-status">{designerStatus}</p></>}
+    </section>
 
     <section className="panel instrument-panel">
       <div className="section-heading"><div><span className="eyebrow">CHOOSE A MYTH</span><h2>{preset.name}</h2><p>{preset.description}</p></div><span className="voice-meter">{activity.activeVoices}/{preset.voiceLimit} voices</span></div>
