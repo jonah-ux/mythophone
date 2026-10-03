@@ -227,9 +227,36 @@ export default function App() {
   }
 
   async function copyShareLink() {
+    const copyWithLegacyApi = (value: string) => {
+      const textarea = document.createElement('textarea')
+      textarea.value = value
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.top = '-9999px'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      try {
+        return document.execCommand('copy')
+      } finally {
+        textarea.remove()
+      }
+    }
+
     try {
       const url = createPatchShareUrl(preset, window.location)
-      await navigator.clipboard.writeText(url)
+      let copied = false
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(url)
+          copied = true
+        } catch {
+          // A denied or unavailable modern clipboard can still use the legacy browser path.
+        }
+      }
+      if (!copied && !copyWithLegacyApi(url)) {
+        throw new Error('Clipboard unavailable; use Export patch to save this instrument.')
+      }
       setMessage(`Copied a share link for ${preset.name}.`)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Share link could not be copied.')
