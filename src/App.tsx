@@ -33,10 +33,11 @@ const macroControls: Array<{ name: MacroName; label: string; hint: string }> = [
   { name: 'texture', label: 'Texture', hint: 'adds the air/noise layer' },
   { name: 'motion', label: 'Motion', hint: 'turns on pitch drift' },
 ]
+const publicAsset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
 const preparedExamples = [
-  { name: 'Rain cello', id: 'rain-cello', file: '/audio/rain-cello-demo.wav', patch: '/patches/rain-cello.mythophone.json', duration: '2.433s', description: 'sustained airy texture' },
-  { name: 'Sand bell', id: 'sand-bell', file: '/audio/sand-bell-demo.wav', patch: '/patches/sand-bell.mythophone.json', duration: '1.989s', description: 'struck tone into a dry tail' },
-  { name: 'Mechanical dragon', id: 'mechanical-dragon', file: '/audio/mechanical-dragon-demo.wav', patch: '/patches/mechanical-dragon.mythophone.json', duration: '0.939s', description: 'playful square-metal growl' },
+  { name: 'Rain cello', id: 'rain-cello', file: publicAsset('audio/rain-cello-demo.wav'), patch: publicAsset('patches/rain-cello.mythophone.json'), duration: '2.433s', description: 'sustained airy texture' },
+  { name: 'Sand bell', id: 'sand-bell', file: publicAsset('audio/sand-bell-demo.wav'), patch: publicAsset('patches/sand-bell.mythophone.json'), duration: '1.989s', description: 'struck tone into a dry tail' },
+  { name: 'Mechanical dragon', id: 'mechanical-dragon', file: publicAsset('audio/mechanical-dragon-demo.wav'), patch: publicAsset('patches/mechanical-dragon.mythophone.json'), duration: '0.939s', description: 'playful square-metal growl' },
 ]
 const initialShared = typeof window === 'undefined' ? { patch: null, error: null } : readSharedPatch(window.location.hash)
 const initialPreset = initialShared.patch ?? presets[0]
