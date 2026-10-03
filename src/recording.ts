@@ -12,7 +12,7 @@ const PerformanceRecordingSchema = z.object({
   schema: z.literal('mythophone/performance/v1'),
   events: z.array(PerformanceEventSchema).max(MAX_EVENTS),
   duration: z.number().finite().min(0.4).max(MAX_SECONDS),
-}).strict()
+}).strict().refine(recording => recording.events.every(event => event.at <= recording.duration), 'performance events exceed the declared duration')
 
 const PerformanceBundleSchema = z.object({
   schema: z.literal('mythophone/performance-bundle/v1'),

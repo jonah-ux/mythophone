@@ -63,6 +63,9 @@ export default function App() {
   const context = useRef<AudioContext | null>(null)
   const instrument = useRef<ReturnType<typeof createInstrument> | null>(null)
   const held = useRef(new Map<string, VoiceHandle>())
+  const pending = useRef(new Map<string, symbol>())
+  const sustainRef = useRef(false)
+  const presetRef = useRef(presets[0])
   const picker = useRef<HTMLInputElement>(null)
   const performancePicker = useRef<HTMLInputElement>(null)
   const designAbort = useRef<AbortController | null>(null)
@@ -87,41 +90,68 @@ export default function App() {
   const enableAudio = useCallback(async () => {
     context.current ??= new AudioContext()
     await context.current.resume()
-    if (!instrument.current) instrument.current = createInstrument(context.current, preset)
+    if (!instrument.current) {
+      instrument.current = createInstrument(context.current, presetRef.current)
+      instrument.current.setSustain(sustainRef.current)
+    }
     setAudioReady(true)
     syncActivity()
     return instrument.current
-  }, [preset, syncActivity])
+  }, [syncActivity])
 
-  function choose(next: Patch) {
+  function releaseInput(at = context.current?.currentTime) {
+    pending.current.clear()
+    if (recorder.isRecording()) {
+      if (instrument.current?.activity().sustain) recorder.push({ type: 'sustain', value: false }, at)
+      for (const voice of held.current.values()) recorder.push({ type: 'note-off', note: voice.note }, at)
+    }
+    instrument.current?.setSustain(false, at)
+    instrument.current?.allNotesOff()
+    held.current.clear()
+    finishRecordingRef.current(at)
+  }
+
+  function choose(next: Patch, remember = true) {
     // Compile first. If it fails, the existing instrument remains playable.
     const compiled = compilePatch(next)
     const replacement = context.current ? createInstrument(context.current, compiled) : null
+    replacement?.setSustain(sustainRef.current)
     const prior = instrument.current
-    held.current.clear()
+    const previousPatch = presetRef.current
+    releaseInput()
+    designAbort.current?.abort()
+    designAbort.current = null
+    setDesigning(false)
     instrument.current = replacement
     prior?.dispose()
-    setPatchHistory(history => [...history.slice(-7), preset])
+    if (remember) setPatchHistory(history => [...history.slice(-7), previousPatch])
+    presetRef.current = compiled
     setPreset(compiled)
-    setActivity(replacement?.activity() ?? { activeVoices: 0, sustain: false, macroValues: compiled.macros, lastNote: null })
+    setActivity(replacement?.activity() ?? { activeVoices: 0, sustain: sustainRef.current, macroValues: compiled.macros, lastNote: null })
     setRenderStats(null)
     setMessage(`Prepared instrument: ${next.name}`)
   }
 
   const startVoice = useCallback(async (token: string, note: number, velocity = 0.84) => {
-    if (held.current.has(token)) return
+    if (held.current.has(token) || pending.current.has(token)) return
+    const request = Symbol(token)
+    pending.current.set(token, request)
     try {
       const synth = await enableAudio()
+      if (pending.current.get(token) !== request) return
       const voice = synth.noteOn(note, velocity)
       held.current.set(token, voice)
       recorder.push({ type: 'note-on', note, velocity }, context.current?.currentTime)
       syncActivity()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Audio unavailable')
+      if (pending.current.get(token) === request) setMessage(error instanceof Error ? error.message : 'Audio unavailable')
+    } finally {
+      if (pending.current.get(token) === request) pending.current.delete(token)
     }
   }, [enableAudio, recorder, syncActivity])
 
   const endVoice = useCallback((token: string) => {
+    pending.current.delete(token)
     const voice = held.current.get(token)
     voice?.release()
     if (voice) recorder.push({ type: 'note-off', note: voice.note }, context.current?.currentTime)
@@ -135,6 +165,7 @@ export default function App() {
   }, [startVoice, endVoice])
 
   const finishRecording = useCallback((at?: number) => {
+    if (!recorder.isRecording()) return
     const currentRecording = recorder.stop(at)
     if (currentRecording.events.length > 0) {
       setRecording(currentRecording)
@@ -147,21 +178,15 @@ export default function App() {
   }, [finishRecording])
 
   function stopAll() {
-    const at = context.current?.currentTime
-    if (recorder.isRecording()) {
-      const active = instrument.current?.activity()
-      if (active?.sustain) recorder.push({ type: 'sustain', value: false }, at)
-      for (const voice of held.current.values()) recorder.push({ type: 'note-off', note: voice.note }, at)
-    }
-    instrument.current?.allNotesOff()
-    held.current.clear()
-    finishRecording(at)
+    releaseInput()
+    sustainRef.current = false
     setSustain(false)
     syncActivity()
     setMessage('All voices released.')
   }
 
   function changeSustain(next: boolean) {
+    sustainRef.current = next
     setSustain(next)
     instrument.current?.setSustain(next)
     recorder.push({ type: 'sustain', value: next }, context.current?.currentTime)
@@ -171,7 +196,9 @@ export default function App() {
 
   function changeMacro(name: MacroName, value: number) {
     const nextValue = Math.min(Math.max(value, 0), 1)
-    setPreset(current => ({ ...current, macros: { ...current.macros, [name]: nextValue } }))
+    const next = { ...presetRef.current, macros: { ...presetRef.current.macros, [name]: nextValue } }
+    presetRef.current = next
+    setPreset(next)
     instrument.current?.setMacro(name, nextValue)
     recorder.push({ type: 'macro', name, value: nextValue }, context.current?.currentTime)
     if (instrument.current) syncActivity()
@@ -181,21 +208,27 @@ export default function App() {
   async function runDesign() {
     designAbort.current?.abort()
     const controller = new AbortController()
+    const requestedPatch = presetRef.current
     designAbort.current = controller
     setDesigning(true)
     setDesignerStatus('Sending a bounded request to the server-side sound designer…')
     try {
-      const result = await requestDesign(designRequestMode, designPrompt, preset, { signal: controller.signal })
+      const result = await requestDesign(designRequestMode, designPrompt, requestedPatch, { signal: controller.signal })
+      if (controller.signal.aborted || designAbort.current !== controller || presetRef.current !== requestedPatch) return
+      designAbort.current = null
       choose(result.patch)
       setMessage('AI interpretation: ' + result.explanation)
       setDesignerStatus('Validated patch applied. Changed: ' + (result.changedPaths.join(', ') || 'none declared') + '.')
     } catch (error) {
+      if (controller.signal.aborted || designAbort.current !== controller) return
       const code = error instanceof DesignError ? error.code : 'provider_refused'
       setDesignerStatus('AI request failed (' + code + '); the current instrument is still playable.')
       setMessage(error instanceof Error ? error.message : 'Sound designer unavailable')
     } finally {
-      if (designAbort.current === controller) designAbort.current = null
-      setDesigning(false)
+      if (designAbort.current === controller) {
+        designAbort.current = null
+        setDesigning(false)
+      }
     }
   }
 
@@ -245,18 +278,18 @@ export default function App() {
 
   async function toggleRecording() {
     if (recorder.isRecording()) {
-      const next = recorder.stop(context.current?.currentTime)
-      setRecording(next)
-      setRecordingPatch(recordingPatchRef.current ?? preset)
-      setIsRecording(false)
-      setMessage('Recorded ' + next.events.length + ' performance events.')
+      stopAll()
+      setMessage('Recording stopped; held voices were released.')
       return
     }
     try {
       await enableAudio()
+      releaseInput()
       recorder.start(context.current?.currentTime)
-      recordingPatchRef.current = preset
-      setRecordingPatch(preset)
+      instrument.current?.setSustain(sustainRef.current)
+      recorder.push({ type: 'sustain', value: sustainRef.current }, context.current?.currentTime)
+      recordingPatchRef.current = presetRef.current
+      setRecordingPatch(presetRef.current)
       setRecording(null)
       setIsRecording(true)
       setMessage('Recording performance on the audio clock. Play notes, move macros, then stop recording.')
@@ -268,15 +301,8 @@ export default function App() {
   function revertPatch() {
     const previous = patchHistory.at(-1)
     if (!previous) return
+    choose(previous, false)
     setPatchHistory(history => history.slice(0, -1))
-    const replacement = context.current ? createInstrument(context.current, previous) : null
-    const prior = instrument.current
-    held.current.clear()
-    instrument.current = replacement
-    prior?.dispose()
-    setPreset(previous)
-    setActivity(replacement?.activity() ?? { activeVoices: 0, sustain: false, macroValues: previous.macros, lastNote: null })
-    setRenderStats(null)
     setMessage('Reverted to ' + previous.name + '.')
   }
 
@@ -342,9 +368,12 @@ export default function App() {
         for (const voice of active.values()) recorderRef.current.push({ type: 'note-off', note: voice.note }, at)
       }
       instrument.current?.allNotesOff()
+      instrument.current?.setSustain(false, at)
+      pending.current.clear()
       active.clear()
       finishRecordingRef.current(at)
       setSustain(false)
+      sustainRef.current = false
       setActivity(instrument.current?.activity() ?? { activeVoices: 0, sustain: false, macroValues: presets[0].macros, lastNote: null })
     }
     const down = (event: KeyboardEvent) => {
@@ -397,7 +426,7 @@ export default function App() {
       </div>
 
       <div className="keyboard" aria-label="On-screen keyboard">
-        {keyboard.map(key => <button key={key.value} className={key.black ? 'black-key' : 'white-key'} aria-label={`${key.name}, computer key ${key.key}`} onPointerDown={event => { event.preventDefault(); void startVoice(String(key.value), key.value) }} onPointerUp={() => endVoice(String(key.value))} onPointerLeave={() => endVoice(String(key.value))}><span>{key.name}</span><kbd>{key.key}</kbd></button>)}
+        {keyboard.map(key => <button key={key.value} className={key.black ? 'black-key' : 'white-key'} aria-label={`${key.name}, computer key ${key.key}`} onPointerDown={event => { event.preventDefault(); void startVoice(String(key.value), key.value) }} onPointerUp={() => endVoice(String(key.value))} onPointerLeave={() => endVoice(String(key.value))} onPointerCancel={() => endVoice(String(key.value))}><span>{key.name}</span><kbd>{key.key}</kbd></button>)}
       </div>
 
       <div className="transport"><label className="sustain-toggle"><input type="checkbox" checked={sustain} onChange={event => changeSustain(event.target.checked)} /> <span>Sustain</span></label><span className="activity">{activity.lastNote ? `Last note ${activity.lastNote}` : 'No note yet'} · {activity.activeVoices ? 'sound is moving' : 'ready to play'}</span><button className="secondary" onClick={stopAll}>All notes off <kbd>Esc</kbd></button></div>

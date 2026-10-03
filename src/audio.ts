@@ -30,6 +30,7 @@ export type RenderedAudioAnalysis = {
 const MAX_PERFORMANCE_EVENTS = 1024
 const MAX_RENDER_SECONDS = 600
 const MAX_PEAK = 0.98
+const scheduledRamps = new WeakMap<AudioParam, { start: number; end: number; from: number; to: number }>()
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
@@ -41,11 +42,18 @@ function noteFrequency(note: number) {
 
 function scheduleRamp(param: AudioParam, value: number, at: number, duration = 0.025) {
   const start = Math.max(at, 0)
-  const current = Number.isFinite(param.value) ? param.value : value
+  const prior = scheduledRamps.get(param)
+  const current = prior
+    ? prior.end <= start ? prior.to : prior.start >= start ? prior.from : prior.from + (prior.to - prior.from) * (start - prior.start) / (prior.end - prior.start)
+    : Number.isFinite(param.value) ? param.value : value
   param.cancelScheduledValues(start)
+  // Preserve the part of an interrupted ramp before this event. Offline
+  // scheduling cannot use AudioParam.value to read a future render quantum.
+  if (prior && start > prior.start && start < prior.end) param.linearRampToValueAtTime(current, start)
   param.setValueAtTime(current, start)
   if (duration <= 0) param.setValueAtTime(value, start)
   else param.linearRampToValueAtTime(value, start + duration)
+  scheduledRamps.set(param, { start, end: start + Math.max(0, duration), from: duration <= 0 ? value : current, to: value })
 }
 
 function levelAt(patch: Patch, elapsed: number, velocity: number) {
@@ -166,7 +174,16 @@ export function createInstrument(context: BaseAudioContext, value: unknown) {
     if (!Number.isFinite(velocity) || velocity < 0.01 || velocity > 1) throw new Error('invalid note velocity')
     if (voices.size >= patch.voiceLimit) {
       const oldest = voices.values().next().value as InternalVoice | undefined
-      if (oldest) releaseVoice(oldest, startAt, true)
+      if (oldest) {
+        // Stealing cuts at the new note's audio time; disconnecting now would
+        // erase the earlier part of a voice scheduled in an offline render.
+        oldest.released = true
+        oldest.oscillator.stop(startAt)
+        oldest.subOscillator?.stop(startAt)
+        oldest.noiseSource.stop(startAt)
+        oldest.lfo.stop(startAt)
+        voices.delete(oldest.id)
+      }
     }
 
     const oscillator = context.createOscillator()
@@ -198,10 +215,10 @@ export function createInstrument(context: BaseAudioContext, value: unknown) {
 
     noiseSource.buffer = noiseBuffer
     noiseSource.loop = true
-    noiseGain.gain.setValueAtTime(macroNoiseGain(patch, macros.texture), startAt)
+    scheduleRamp(noiseGain.gain, macroNoiseGain(patch, macros.texture), startAt, 0)
     noiseSource.connect(noiseGain).connect(filter)
     filter.type = patch.filter.type
-    filter.frequency.setValueAtTime(macroFilterCutoff(patch, macros.brightness), startAt)
+    scheduleRamp(filter.frequency, macroFilterCutoff(patch, macros.brightness), startAt, 0)
     filter.Q.setValueAtTime(patch.filter.resonance, startAt)
 
     envelope.gain.setValueAtTime(0, startAt)
@@ -210,8 +227,8 @@ export function createInstrument(context: BaseAudioContext, value: unknown) {
     filter.connect(envelope).connect(master)
 
     lfo.type = 'sine'
-    lfo.frequency.setValueAtTime(2.5 + macros.motion * 8, startAt)
-    lfoGain.gain.setValueAtTime(macros.motion * 26, startAt)
+    scheduleRamp(lfo.frequency, 2.5 + macros.motion * 8, startAt, 0)
+    scheduleRamp(lfoGain.gain, macros.motion * 26, startAt, 0)
     lfo.connect(lfoGain).connect(oscillator.detune)
     if (subOscillator) lfoGain.connect(subOscillator.detune)
 

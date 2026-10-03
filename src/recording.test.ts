@@ -26,6 +26,9 @@ describe('portable performance recording', () => {
     expect(() => parseRecording({ schema: 'mythophone/performance/v2', events: [], duration: 0.4 })).toThrow()
     expect(() => parseRecording({ schema: 'mythophone/performance/v1', events: [{ type: 'shell', at: 0 }], duration: 0.4 })).toThrow()
     expect(() => parseRecording({ schema: 'mythophone/performance/v1', events: [], duration: 0 })).toThrow()
+    const outside = { schema: 'mythophone/performance/v1', events: [{ type: 'note-on', at: 10, note: 60, velocity: 0.8 }], duration: 0.4 }
+    expect(() => parseRecording(outside)).toThrow()
+    expect(() => importPerformanceBundle(JSON.stringify({ schema: 'mythophone/performance-bundle/v1', patch: source[0], recording: outside }))).toThrow()
   })
 
   it('round-trips an explicit patch plus recording bundle', () => {
