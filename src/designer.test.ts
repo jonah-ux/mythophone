@@ -6,6 +6,7 @@ import {
   DesignError,
   DesignRequestSchema,
   DesignResponseSchema,
+  requestDesign,
 } from './designer'
 
 const patch = parsePatch(source[0])
@@ -57,5 +58,20 @@ describe('sound designer boundary', () => {
       prompt: 'x'.repeat(241),
       currentPatch: patch,
     })).toThrow()
+  })
+
+  it('turns caller cancellation into a safe provider failure', async () => {
+    const previousFetch = globalThis.fetch
+    const caller = new AbortController()
+    globalThis.fetch = async (_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })), { once: true })
+    })
+    try {
+      const pending = requestDesign('edit', 'make the attack softer', patch, { signal: caller.signal })
+      caller.abort()
+      await expect(pending).rejects.toMatchObject({ name: 'DesignError', code: 'provider_refused' })
+    } finally {
+      globalThis.fetch = previousFetch
+    }
   })
 })

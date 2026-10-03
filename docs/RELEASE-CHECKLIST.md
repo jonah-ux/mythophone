@@ -10,6 +10,8 @@ This checklist keeps the first release's source, local runtime, provider, and pu
 - Patch export/import, short patch history/revert, validated performance events, and PCM WAV export are available without a provider request.
 - Portable take export/import bundles the validated patch with its timed performance before offline WAV rendering.
 - All-notes-off and focus loss close an active recording with terminal note-off events before releasing voices.
+- Patch selection, patch import, AI application, and Revert are held while recording so a portable take retains one patch identity.
+- Provider refusal, timeout/abort, unconfigured state, invalid output, and caller cancellation have explicit contract coverage without requiring credentials.
 - Configured AI mode is visibly separate and returns an explicit `provider_unconfigured` failure when server configuration is absent; the current patch remains playable after that failure.
 - Reduced-motion preferences remove the keyboard press transform and shorten any future CSS animation/transition duration.
 - The measured sound field exposes active voices and macro values through an accessible label and responds to live note activity.
@@ -23,3 +25,4 @@ This checklist keeps the first release's source, local runtime, provider, and pu
 - Exercise one credentialed real provider through `/api/design`, read back its validated patch, render notes from it, and exercise one scoped edit.
 - Run the broader release browser/audio matrix on the named release environment, then publish through the repository's release owner.
 - Record deployment/public-hosting state separately from local source and CI evidence.
+- The dated [release state record](RELEASE-STATE.md) currently records no GitHub releases, tags, or deployment records as of 2026-10-03 22:38:51 UTC.
