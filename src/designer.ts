@@ -91,16 +91,21 @@ function errorFromStatus(status: number, payload: unknown) {
   if (parsed.success) return new DesignError(parsed.data.code, parsed.data.message)
   if (status === 413) return new DesignError('request_too_large', 'sound-design request is too large')
   if (status === 408 || status === 504) return new DesignError('provider_timeout', 'sound designer timed out')
+  if (status === 404) return new DesignError('provider_refused', 'sound-designer endpoint was not found')
   if (status >= 400 && status < 500) return new DesignError('request_invalid', 'sound-design request was refused')
   return new DesignError('provider_refused', 'sound designer is unavailable')
 }
 
 async function readJson(response: Response) {
   const text = await response.text()
-  if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) throw new DesignError('invalid_provider_output', 'sound-designer response exceeds the response limit')
+  if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) {
+    if (!response.ok) return null
+    throw new DesignError('invalid_provider_output', 'sound-designer response exceeds the response limit')
+  }
   try {
     return JSON.parse(text) as unknown
   } catch {
+    if (!response.ok) return null
     throw new DesignError('invalid_provider_output', 'sound-designer response was not JSON')
   }
 }
