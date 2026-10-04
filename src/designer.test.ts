@@ -74,4 +74,18 @@ describe('sound designer boundary', () => {
       globalThis.fetch = previousFetch
     }
   })
+
+  it('turns a missing or HTML adapter route into an explicit provider failure', async () => {
+    const previousFetch = globalThis.fetch
+    globalThis.fetch = async () => new Response('<!doctype html><h1>Not Found</h1>', { status: 404, headers: { 'content-type': 'text/html' } })
+    try {
+      await expect(requestDesign('edit', 'make the attack softer', patch)).rejects.toMatchObject({
+        name: 'DesignError',
+        code: 'provider_refused',
+        message: 'sound-designer endpoint was not found',
+      })
+    } finally {
+      globalThis.fetch = previousFetch
+    }
+  })
 })
