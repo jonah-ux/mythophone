@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { PatchSchema } from './domain'
 import type { Patch } from './domain'
 
-const DESIGN_ENDPOINT = '/api/design'
+const DESIGN_ENDPOINT = import.meta.env.VITE_MYTHOPHONE_API_URL?.trim() || '/api/design'
 const DESIGN_TIMEOUT_MS = 15_000
 const MAX_RESPONSE_BYTES = 32 * 1024
 
