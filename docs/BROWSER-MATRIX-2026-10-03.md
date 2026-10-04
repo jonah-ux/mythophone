@@ -39,6 +39,15 @@ This is local runtime evidence for the prepared instrument, not deployment or hu
 - The same live page then had `navigator.clipboard` disabled before clicking the control again. The legacy copy path still reported the same success status, and `document.querySelectorAll('textarea').length` returned `0` after cleanup.
 - This exercises the fallback behavior in a real browser page; it does not claim an OS-level clipboard readback.
 
+## Repository-subpath static-build proof
+
+- Observed at: `2026-10-03 23:58 UTC`
+- Source head: `5ae56cf8d6a4ed846fd99ca0bc9e5721d3a7d33d`
+- `MYTHOPHONE_BASE_PATH=/mythophone/ npm run build` completed successfully. A path-aware static host served the output at `http://127.0.0.1:6202/mythophone/`.
+- The real browser loaded the page without console errors. All three audio elements resolved under `/mythophone/audio/`, reported `readyState=4`, and retained durations `2.433356`, `1.988685`, and `0.938685` seconds.
+- All three downloadable patch links resolved under `/mythophone/patches/`, and browser `fetch` returned `[200, 200, 200]`.
+- A plain root-mounted Vite preview does not emulate a repository subpath, so this proof used a static directory mounted at the configured prefix.
+
 ## Responsive proof
 
 - Resized the same page to `390x844`.
