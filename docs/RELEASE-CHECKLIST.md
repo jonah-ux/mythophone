@@ -15,7 +15,7 @@ This checklist keeps the first release's source, local runtime, provider, and pu
 - The adapter's browser origin is configurable for a separately deployed frontend; the default remains the local Vite origin and the CORS preflight contract is tested.
 - The browser adapter URL is configurable through public build-time `VITE_MYTHOPHONE_API_URL`; the local `/api/design` proxy remains the default and provider secrets stay server-side.
 - Browser-origin configuration rejects wildcard, credential-bearing, non-HTTP, and malformed values before the adapter starts serving.
-- The dated [browser/audio matrix receipt](BROWSER-MATRIX-2026-10-03.md) records desktop, 390px mobile, browser WAV playback, OfflineAudioContext metrics, portable-take finalization, patch-identity protection, and provider-unconfigured behavior at the reviewed head.
+- The dated [browser/audio matrix receipt](BROWSER-MATRIX-2026-10-03.md) records desktop, 390px mobile, browser WAV playback, OfflineAudioContext metrics, portable-take finalization, patch-identity protection, configured-adapter routing, and provider-unconfigured behavior at the reviewed heads.
 - Configured AI mode is visibly separate and returns an explicit `provider_unconfigured` failure when server configuration is absent; the current patch remains playable after that failure.
 - Reduced-motion preferences remove the keyboard press transform and shorten any future CSS animation/transition duration.
 - The measured sound field exposes active voices and macro values through an accessible label and responds to live note activity.

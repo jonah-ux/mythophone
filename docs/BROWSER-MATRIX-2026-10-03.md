@@ -48,6 +48,14 @@ This is local runtime evidence for the prepared instrument, not deployment or hu
 - All three downloadable patch links resolved under `/mythophone/patches/`, and browser `fetch` returned `[200, 200, 200]`.
 - A plain root-mounted Vite preview does not emulate a repository subpath, so this proof used a static directory mounted at the configured prefix.
 
+## Configured adapter endpoint follow-up
+
+- Observed at: `2026-10-04 00:17 UTC`
+- Source head: `8ab89d89738c4de41c1f40b57781638304e93df8`
+- Built with `MYTHOPHONE_BASE_PATH=/mythophone/` and `VITE_MYTHOPHONE_API_URL=http://127.0.0.1:8811/api/design`, then served the static output at `http://127.0.0.1:6204/mythophone/` with the adapter allowing that browser origin.
+- The configured-mode UI described the destination as the configured adapter endpoint. After **Ask sound designer**, the UI reported `AI request failed (provider_unconfigured); the current instrument is still playable.` and the prepared audio elements remained loaded with `readyState` `[4, 4, 4]`.
+- Browser performance entries included `http://127.0.0.1:8811/api/design`; the adapter returned HTTP `503` for its expected no-credential response. This proves the separately configured endpoint was reached and failed closed; it is not credentialed-provider evidence.
+
 ## Responsive proof
 
 - Resized the same page to `390x844`.
