@@ -36,6 +36,16 @@ This is a dated state record, not a release claim. Re-run the GitHub commands be
 - In **Configured AI**, **Ask sound designer** received the static host's HTTP `405` HTML response. The visible status was `AI request failed (provider_refused); the current instrument is still playable.`, with the underlying message `sound-designer endpoint returned a non-JSON response`.
 - This proves public adoption of the refusal classification and preserves the prepared no-key path. It does not prove a credentialed provider completion; `MYTHOPHONE_AI_API_KEY` and `MYTHOPHONE_AI_MODEL` remain absent in the available environment.
 
+## Public readback 2026-10-04 15:01:17 UTC
+
+- Public `main` reads `d1cc416bb1b3e5ec83dbdedae97d743d0a7b6de6`, the governed merge commit for the adapter-contract hardening PR.
+- Pages workflow run `37211054554` completed successfully against that head; the latest `github-pages` deployment record is `6842540575` targeting the same SHA.
+- Current-head source verification completed locally at `eb8f192a27e2ffeb6617701aba79b0593379e7cc`: lint, TypeScript, 25 Vitest tests, 8 Node contract tests, and the production build all passed.
+- GitHub starter-check run `37211054544` also completed successfully for `d1cc416`. A separate post-push run `37211047946` failed before checkout completed because it attempted to fetch the absent governed candidate tag `fleet-pr-merge-candidate-d1cc416bb1b3e5ec83dbdedae97d743d0a7b6de6`; this is recorded as checkout/tag infrastructure failure, not a source-test result.
+- The public browser rendered the prepared Rain cello patch as `Finite`, peak `0.116`, RMS `0.0259`, estimated frequency `110.0 Hz`, tail RMS `0.00283`, and `127,036` active samples. The three prepared examples remain exposed at `2.433356`, `1.988685`, and `0.938685` seconds.
+- In **Configured AI**, **Ask sound designer** displayed `AI request failed (provider_refused); the current instrument is still playable.`, with the underlying message `sound-designer endpoint returned a non-JSON response`.
+- The adapter contract now advertises `POST, OPTIONS` on CORS preflight, and browser-side pre-aborted or malformed requests are normalized before any provider dispatch. The credentialed provider canary remains unrun because provider configuration is absent.
+
 ## Recheck route
 
 From an authenticated checkout, run:
