@@ -27,6 +27,15 @@ This is a dated state record, not a release claim. Re-run the GitHub commands be
 - The static Pages frontend has no `/api/design` adapter. On the current `main` deployment, configured mode remains an explicit failure while the prepared patch and offline proof stay playable; PR #27 carries the follow-up classification for the HTML SPA fallback and is still held by the remote governed-merge receipt-writer gate.
 - Fresh GitHub readback still shows no releases and `0` tags. Public hosting is now observed for `main`; credentialed provider completion and PR #27 error-classification adoption remain separate.
 
+## Public readback 2026-10-04 14:09:41 UTC
+
+- Public `main` reads `58ef327f197ea9a38d1167b7251052cb5396ed4d` after the governed merge of the non-JSON adapter refusal classification.
+- Pages workflow run `37208060639` completed successfully against that head; the latest `github-pages` deployment record is `6842009080` targeting the same SHA.
+- `https://jonah-ux.github.io/mythophone/` returned HTTP `200`. The real browser loaded all three prepared WAV files with `readyState=4` and durations `2.433356`, `1.988685`, and `0.938685` seconds.
+- The public browser's **Render audio check** reported `Finite`, peak `0.116`, RMS `0.0259`, estimated frequency `110.0 Hz`, tail RMS `0.00283`, and `127,036` active samples. Enabling audio and clicking C4 showed `1/8 voice` and `Last note 60 · sound is moving`.
+- In **Configured AI**, **Ask sound designer** received the static host's HTTP `405` HTML response. The visible status was `AI request failed (provider_refused); the current instrument is still playable.`, with the underlying message `sound-designer endpoint returned a non-JSON response`.
+- This proves public adoption of the refusal classification and preserves the prepared no-key path. It does not prove a credentialed provider completion; `MYTHOPHONE_AI_API_KEY` and `MYTHOPHONE_AI_MODEL` remain absent in the available environment.
+
 ## Recheck route
 
 From an authenticated checkout, run:
