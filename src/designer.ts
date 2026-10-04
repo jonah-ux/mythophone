@@ -117,8 +117,16 @@ export async function requestDesign(
   currentPatch: Patch,
   options?: { endpoint?: string; signal?: AbortSignal },
 ): Promise<DesignResponse> {
-  const request = DesignRequestSchema.parse({ schema: 'mythophone/design-request/v1', mode, prompt, currentPatch })
   const controller = new AbortController()
+  if (options?.signal?.aborted) {
+    throw new DesignError('provider_refused', 'sound-design request cancelled')
+  }
+  let request: DesignRequest
+  try {
+    request = DesignRequestSchema.parse({ schema: 'mythophone/design-request/v1', mode, prompt, currentPatch })
+  } catch {
+    throw new DesignError('request_invalid', 'sound-design request failed the bounded design schema')
+  }
   const timeout = setTimeout(() => controller.abort('timeout'), DESIGN_TIMEOUT_MS)
   const relayAbort = () => controller.abort(options?.signal?.reason ?? 'cancelled')
   options?.signal?.addEventListener('abort', relayAbort, { once: true })

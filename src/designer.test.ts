@@ -75,6 +75,32 @@ describe('sound designer boundary', () => {
     }
   })
 
+  it('does not dispatch an already-cancelled request and normalizes invalid input', async () => {
+    const previousFetch = globalThis.fetch
+    let calls = 0
+    const caller = new AbortController()
+    caller.abort()
+    globalThis.fetch = async () => {
+      calls += 1
+      return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+    }
+    try {
+      await expect(requestDesign('edit', 'make the attack softer', patch, { signal: caller.signal })).rejects.toMatchObject({
+        name: 'DesignError',
+        code: 'provider_refused',
+        message: 'sound-design request cancelled',
+      })
+      await expect(requestDesign('edit', 'x', patch)).rejects.toMatchObject({
+        name: 'DesignError',
+        code: 'request_invalid',
+        message: 'sound-design request failed the bounded design schema',
+      })
+      expect(calls).toBe(0)
+    } finally {
+      globalThis.fetch = previousFetch
+    }
+  })
+
   it('turns a missing or HTML adapter route into an explicit provider failure', async () => {
     const previousFetch = globalThis.fetch
     globalThis.fetch = async () => new Response('<!doctype html><h1>Not Found</h1>', { status: 404, headers: { 'content-type': 'text/html' } })
