@@ -58,14 +58,14 @@ Use **Record performance** while playing notes or moving macros, then stop to ca
 
 Start the local adapter in a second terminal:
 
-`sh
+```sh
 cp .env.example .env
 # set MYTHOPHONE_AI_API_KEY and MYTHOPHONE_AI_MODEL in the server environment
 # set MYTHOPHONE_WEB_ORIGIN when the browser is hosted on a different origin
 npm run api
-`
+```
 
-Then run `npm run dev`, switch the UI from **Prepared** to **Configured AI**, and choose **New instrument** or **Refine current patch**. The browser sends a bounded `mythophone/design-request/v1` payload to `/api/design`. The server asks one OpenAI-compatible provider for JSON, validates `mythophone/design-response/v1`, and refuses any response that changes an undeclared path. A provider refusal, timeout, cancellation, oversized response, invalid graph, or missing configuration leaves the current playable patch in place.
+Then run `npm run dev`, switch the UI from **Prepared** to **Configured AI**, and choose **New instrument** or **Refine current patch**. The browser sends a bounded `mythophone/design-request/v1` payload to `/api/design` by default. For a separately hosted frontend, set the public build-time `VITE_MYTHOPHONE_API_URL` to the adapter's `/api/design` URL and set `MYTHOPHONE_WEB_ORIGIN` on the adapter to the frontend origin. The server asks one OpenAI-compatible provider for JSON, validates `mythophone/design-response/v1`, and refuses any response that changes an undeclared path. A provider refusal, timeout, cancellation, oversized response, invalid graph, or missing configuration leaves the current playable patch in place.
 
 The adapter is provider-shaped but provider-agnostic. This repository does not claim a live provider completion until a real credentialed request has been exercised and its returned patch has been rendered.
 
