@@ -27,6 +27,7 @@ jobs:
       - run: npm run build
         env:
           MYTHOPHONE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_MYTHOPHONE_API_URL: https://mythophone-api.vercel.app/api/design
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
