@@ -89,12 +89,12 @@ export function assertScopedRevision(previous: Patch, next: Patch, changedPaths:
 function errorFromStatus(status: number, payload: unknown) {
   const parsed = DesignErrorSchema.safeParse(payload)
   if (parsed.success) return new DesignError(parsed.data.code, parsed.data.message)
+  if (status === 413) return new DesignError('request_too_large', 'sound-design request is too large')
+  if (status === 408 || status === 504) return new DesignError('provider_timeout', 'sound designer timed out')
   if (payload === null) {
     if (status === 404) return new DesignError('provider_refused', 'sound-designer endpoint was not found')
     return new DesignError('provider_refused', 'sound-designer endpoint returned a non-JSON response')
   }
-  if (status === 413) return new DesignError('request_too_large', 'sound-design request is too large')
-  if (status === 408 || status === 504) return new DesignError('provider_timeout', 'sound designer timed out')
   if (status === 404) return new DesignError('provider_refused', 'sound-designer endpoint was not found')
   if (status >= 400 && status < 500) return new DesignError('request_invalid', 'sound-design request was refused')
   return new DesignError('provider_refused', 'sound designer is unavailable')
@@ -121,8 +121,16 @@ export async function requestDesign(
   currentPatch: Patch,
   options?: { endpoint?: string; signal?: AbortSignal },
 ): Promise<DesignResponse> {
-  const request = DesignRequestSchema.parse({ schema: 'mythophone/design-request/v1', mode, prompt, currentPatch })
   const controller = new AbortController()
+  if (options?.signal?.aborted) {
+    throw new DesignError('provider_refused', 'sound-design request cancelled')
+  }
+  let request: DesignRequest
+  try {
+    request = DesignRequestSchema.parse({ schema: 'mythophone/design-request/v1', mode, prompt, currentPatch })
+  } catch {
+    throw new DesignError('request_invalid', 'sound-design request failed the bounded design schema')
+  }
   const timeout = setTimeout(() => controller.abort('timeout'), DESIGN_TIMEOUT_MS)
   const relayAbort = () => controller.abort(options?.signal?.reason ?? 'cancelled')
   options?.signal?.addEventListener('abort', relayAbort, { once: true })
