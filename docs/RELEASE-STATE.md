@@ -18,6 +18,15 @@ This is a dated state record, not a release claim. Re-run the GitHub commands be
 - The public `main` branch still reads `c871c71d7056d8aec4221c0a87abe22f5a1ecb4e`; these stacked parent-branch merges have not yet been adopted by `main`.
 - Fresh GitHub readback returned no releases, `0` tags, and `0` deployment records. The Pages workflow therefore remains source evidence, not public-host evidence.
 
+## Public readback 2026-10-04 01:06:09 UTC
+
+- Public `main` reads `5b0e1ac978a1b5687def8540300cd84377a7526d`.
+- GitHub Pages deployments `6835036211`, `6835082209`, and `6835085747` target environment `github-pages`; the latest deployment targets `5b0e1ac978a1b5687def8540300cd84377a7526d`.
+- `https://jonah-ux.github.io/mythophone/` returned HTTP `200`; the real browser loaded all three prepared WAV files under `/mythophone/audio/` with `readyState=4` and durations `2.433356`, `1.988685`, and `0.938685` seconds.
+- The public browser's **Render audio check** reported `Finite`, peak `0.116`, RMS `0.0259`, estimated frequency `110.0 Hz`, tail RMS `0.00283`, and `127,036` active samples.
+- The static Pages frontend has no `/api/design` adapter. On the current `main` deployment, configured mode remains an explicit failure while the prepared patch and offline proof stay playable; PR #27 carries the follow-up classification for the HTML SPA fallback and is still held by the remote governed-merge receipt-writer gate.
+- Fresh GitHub readback still shows no releases and `0` tags. Public hosting is now observed for `main`; credentialed provider completion and PR #27 error-classification adoption remain separate.
+
 ## Recheck route
 
 From an authenticated checkout, run:
