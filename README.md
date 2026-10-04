@@ -67,7 +67,7 @@ npm run api
 
 Then run `npm run dev`, switch the UI from **Prepared** to **Configured AI**, and choose **New instrument** or **Refine current patch**. The browser sends a bounded `mythophone/design-request/v1` payload to `/api/design` by default. For a separately hosted frontend, set the public build-time `VITE_MYTHOPHONE_API_URL` to the adapter's `/api/design` URL and set `MYTHOPHONE_WEB_ORIGIN` on the adapter to the frontend origin. The server asks one OpenAI-compatible provider for JSON, validates `mythophone/design-response/v1`, and refuses any response that changes an undeclared path. A provider refusal, timeout, cancellation, oversized response, invalid graph, or missing configuration leaves the current playable patch in place.
 
-The adapter is provider-shaped but provider-agnostic. This repository does not claim a live provider completion until a real credentialed request has been exercised and its returned patch has been rendered.
+The adapter is provider-shaped but provider-agnostic. The public Vercel boundary is reachable, but it currently provides browser-origin control and bounded request handling without authentication or rate limiting. It therefore remains intentionally provider-unconfigured; do not add provider credentials until those controls are in place. This repository does not claim a live provider completion until a real credentialed request has been exercised and its returned patch has been rendered.
 
 ## Portable patches
 
