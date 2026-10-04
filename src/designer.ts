@@ -89,6 +89,10 @@ export function assertScopedRevision(previous: Patch, next: Patch, changedPaths:
 function errorFromStatus(status: number, payload: unknown) {
   const parsed = DesignErrorSchema.safeParse(payload)
   if (parsed.success) return new DesignError(parsed.data.code, parsed.data.message)
+  if (payload === null) {
+    if (status === 404) return new DesignError('provider_refused', 'sound-designer endpoint was not found')
+    return new DesignError('provider_refused', 'sound-designer endpoint returned a non-JSON response')
+  }
   if (status === 413) return new DesignError('request_too_large', 'sound-design request is too large')
   if (status === 408 || status === 504) return new DesignError('provider_timeout', 'sound designer timed out')
   if (status === 404) return new DesignError('provider_refused', 'sound-designer endpoint was not found')
