@@ -17,9 +17,9 @@
 ## Remaining release gates
 
 1. Exercise one configured real provider through the server adapter, then render the returned patch and one scoped edit. Keep the live-provider claim separate from mocked adapter tests.
-2. Run the broader browser/audio matrix on the named release environment and publish through the repository's release owner.
-3. Record deployment/public-hosting state separately from local source and CI evidence.
+2. Merge the open release-state and adapter-error PRs through the governed owner route, then rerun the public browser readback against the resulting `main` head.
+3. Keep the deployment/readback receipt fresh after any source or hosting change; the current public Pages deployment is recorded separately in [RELEASE-STATE.md](RELEASE-STATE.md).
 
-The repository now contains a GitHub Pages workflow for the prepared no-key build. The [browser/audio matrix receipt](BROWSER-MATRIX-2026-10-03.md) proves the local runtime at the named head; the Pages workflow remains source evidence only until the release owner merges it, GitHub Pages accepts the deployment, and a live URL is read back in the named browser environment.
+The repository contains a GitHub Pages workflow for the prepared no-key build, and the current `main` head is deployed at [jonah-ux.github.io/mythophone](https://jonah-ux.github.io/mythophone/). The [browser/audio matrix receipt](BROWSER-MATRIX-2026-10-03.md) and [RELEASE-STATE.md](RELEASE-STATE.md) keep local, public, and provider evidence separate. Pages does not provide `/api/design`; a separately deployed adapter and provider credentials remain required for configured AI.
 
 The no-key prepared mode remains the honest baseline. A real configured provider must be exercised separately before live AI is described as verified.
