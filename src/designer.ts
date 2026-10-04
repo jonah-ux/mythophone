@@ -97,6 +97,7 @@ function errorFromStatus(status: number, payload: unknown) {
 }
 
 async function readJson(response: Response) {
+  const contentType = response.headers.get('content-type')?.toLowerCase() ?? ''
   const text = await response.text()
   if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) {
     if (!response.ok) return null
@@ -105,7 +106,7 @@ async function readJson(response: Response) {
   try {
     return JSON.parse(text) as unknown
   } catch {
-    if (!response.ok) return null
+    if (!response.ok || !contentType.includes('json')) return null
     throw new DesignError('invalid_provider_output', 'sound-designer response was not JSON')
   }
 }
@@ -130,6 +131,7 @@ export async function requestDesign(
     })
     const payload = await readJson(response)
     if (!response.ok) throw errorFromStatus(response.status, payload)
+    if (payload === null) throw new DesignError('provider_refused', 'sound-designer endpoint returned a non-JSON response')
     const result = DesignResponseSchema.safeParse(payload)
     if (!result.success) throw new DesignError('invalid_provider_output', 'sound-designer response failed the patch schema')
     assertScopedRevision(currentPatch, result.data.patch, result.data.changedPaths)

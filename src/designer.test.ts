@@ -88,4 +88,18 @@ describe('sound designer boundary', () => {
       globalThis.fetch = previousFetch
     }
   })
+
+  it('rejects a static-host HTML fallback even when it returns HTTP 200', async () => {
+    const previousFetch = globalThis.fetch
+    globalThis.fetch = async () => new Response('<!doctype html><div id="root"></div>', { status: 200, headers: { 'content-type': 'text/html' } })
+    try {
+      await expect(requestDesign('edit', 'make the attack softer', patch)).rejects.toMatchObject({
+        name: 'DesignError',
+        code: 'provider_refused',
+        message: 'sound-designer endpoint returned a non-JSON response',
+      })
+    } finally {
+      globalThis.fetch = previousFetch
+    }
+  })
 })
