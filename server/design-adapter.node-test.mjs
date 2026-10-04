@@ -92,6 +92,7 @@ test('uses the configured browser origin for CORS preflight', async () => {
     })
     assert.equal(response.status, 204)
     assert.equal(response.headers.get('access-control-allow-origin'), 'https://mythophone.example')
+    assert.equal(response.headers.get('access-control-allow-methods'), 'POST, OPTIONS')
   } finally {
     const closed = once(server, 'close')
     server.close()

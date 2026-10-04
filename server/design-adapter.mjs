@@ -203,7 +203,11 @@ export function startServer(port = Number(process.env.MYTHOPHONE_API_PORT || 878
   const webOrigin = normalizeWebOrigin(options.webOrigin || process.env.MYTHOPHONE_WEB_ORIGIN || DEFAULT_WEB_ORIGIN)
   const server = createServer(async (req, res) => {
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, { 'access-control-allow-origin': webOrigin, 'access-control-allow-headers': 'content-type' })
+      res.writeHead(204, {
+        'access-control-allow-origin': webOrigin,
+        'access-control-allow-methods': 'POST, OPTIONS',
+        'access-control-allow-headers': 'content-type',
+      })
       res.end()
       return
     }
