@@ -17,9 +17,9 @@
 ## Remaining release gates
 
 1. Exercise one configured real provider through the server adapter, then render the returned patch and one scoped edit. Keep the live-provider claim separate from mocked adapter tests.
-2. Merge the open release-state and adapter-error PRs through the governed owner route, then rerun the public browser readback against the resulting `main` head.
-3. Keep the deployment/readback receipt fresh after any source or hosting change; the current public Pages deployment is recorded separately in [RELEASE-STATE.md](RELEASE-STATE.md).
+2. Keep the deployment/readback receipt fresh after any source or hosting change; the current public Pages deployment is recorded separately in [RELEASE-STATE.md](RELEASE-STATE.md).
+3. Run the credentialed provider canary against the separately deployed adapter, then record its validated patch, scoped edit, and rendered result beside the static-host evidence.
 
 The repository contains a GitHub Pages workflow for the prepared no-key build, and the current `main` head is deployed at [jonah-ux.github.io/mythophone](https://jonah-ux.github.io/mythophone/). The [browser/audio matrix receipt](BROWSER-MATRIX-2026-10-03.md) and [RELEASE-STATE.md](RELEASE-STATE.md) keep local, public, and provider evidence separate. Pages does not provide `/api/design`; a separately deployed adapter and provider credentials remain required for configured AI.
 
-The no-key prepared mode remains the honest baseline. A real configured provider must be exercised separately before live AI is described as verified.
+The no-key prepared mode remains the honest baseline. The static-host refusal classification is publicly adopted, but a real configured provider must be exercised separately before live AI is described as verified.

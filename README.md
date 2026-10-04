@@ -75,7 +75,7 @@ Use **Export patch** to save a `.mythophone.json` file, or **Copy share link** t
 
 ## Release path
 
-The playable, portable, and measured no-key path is deployed at [jonah-ux.github.io/mythophone](https://jonah-ux.github.io/mythophone/) from the reviewed `main` head recorded in [docs/RELEASE-STATE.md](docs/RELEASE-STATE.md). The GitHub Pages workflow and public browser readback prove the prepared static experience; Pages does not provide `/api/design`, so configured AI still needs a separately deployed server adapter and provider credentials. The remaining release gate is a credentialed provider canary plus the final error-classification adoption recorded in the open release PRs. See [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md), [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md), and the complete [build prompt](docs/BUILD-PROMPT.md).
+The playable, portable, and measured no-key path is deployed at [jonah-ux.github.io/mythophone](https://jonah-ux.github.io/mythophone/) from the reviewed `main` head recorded in [docs/RELEASE-STATE.md](docs/RELEASE-STATE.md). The GitHub Pages workflow and public browser readback prove the prepared static experience; Pages does not provide `/api/design`, so configured AI still needs a separately deployed server adapter and provider credentials. The public readback also proves that a static-host non-JSON adapter response is classified as `provider_refused` while the prepared instrument remains playable. The remaining release gate is a credentialed provider canary. See [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md), [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md), and the complete [build prompt](docs/BUILD-PROMPT.md).
 
 ## Provenance and limits
 
