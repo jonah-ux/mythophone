@@ -33,4 +33,9 @@ test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured s
   }, postResponse)
   assert.equal(postResponse.statusCode, 503)
   assert.equal(JSON.parse(postResponse.body).code, 'provider_unconfigured')
+
+  const oversizedResponse = response()
+  await handleVercelDesignRequest({ method: 'POST', body: { padding: 'x'.repeat(20_000) } }, oversizedResponse)
+  assert.equal(oversizedResponse.statusCode, 413)
+  assert.equal(JSON.parse(oversizedResponse.body).code, 'request_too_large')
 })
