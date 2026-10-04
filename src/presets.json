@@ -1,5 +1,44 @@
 [
-  {"schema": "mythophone/preset/v1", "id": "glass-bell", "name": "Glass bell", "oscillator": "sine", "gain": 0.1, "cutoff": 6000, "attack": 0.008, "release": 1.4},
-  {"schema": "mythophone/preset/v1", "id": "soft-reed", "name": "Soft reed", "oscillator": "triangle", "gain": 0.09, "cutoff": 1800, "attack": 0.12, "release": 0.35},
-  {"schema": "mythophone/preset/v1", "id": "electric-thread", "name": "Electric thread", "oscillator": "sawtooth", "gain": 0.075, "cutoff": 900, "attack": 0.025, "release": 0.15}
+  {
+    "schema": "mythophone/patch/v1",
+    "id": "rain-cello",
+    "name": "Rain cello",
+    "description": "A warm bowed body with a controllable veil of rain-like air.",
+    "oscillator": {"type": "triangle", "mix": 0.82, "detune": 0, "octave": 0},
+    "subOscillator": {"type": "sine", "mix": 0.34, "detune": -4, "octave": -1},
+    "noise": {"mix": 0.12, "color": "white"},
+    "envelope": {"level": 0.092, "attack": 0.18, "decay": 0.28, "sustain": 0.72, "release": 1.8},
+    "filter": {"type": "lowpass", "cutoff": 2400, "resonance": 1.4},
+    "masterGain": 0.72,
+    "voiceLimit": 8,
+    "macros": {"brightness": 0.52, "texture": 0.28, "motion": 0.12}
+  },
+  {
+    "schema": "mythophone/patch/v1",
+    "id": "sand-bell",
+    "name": "Sand bell",
+    "description": "A struck glass tone that sheds its sparkle into a dry, noisy tail.",
+    "oscillator": {"type": "sine", "mix": 0.92, "detune": 0, "octave": 0},
+    "subOscillator": {"type": "sine", "mix": 0.25, "detune": 7, "octave": 1},
+    "noise": {"mix": 0.36, "color": "white"},
+    "envelope": {"level": 0.1, "attack": 0.006, "decay": 0.62, "sustain": 0.14, "release": 1.35},
+    "filter": {"type": "bandpass", "cutoff": 5800, "resonance": 4.8},
+    "masterGain": 0.68,
+    "voiceLimit": 10,
+    "macros": {"brightness": 0.68, "texture": 0.62, "motion": 0.05}
+  },
+  {
+    "schema": "mythophone/patch/v1",
+    "id": "mechanical-dragon",
+    "name": "Mechanical dragon",
+    "description": "A playful square-metal growl with a bite of motion for expressive roars.",
+    "oscillator": {"type": "square", "mix": 0.7, "detune": 0, "octave": 0},
+    "subOscillator": {"type": "sawtooth", "mix": 0.32, "detune": -9, "octave": -1},
+    "noise": {"mix": 0.2, "color": "white"},
+    "envelope": {"level": 0.078, "attack": 0.012, "decay": 0.16, "sustain": 0.58, "release": 0.3},
+    "filter": {"type": "lowpass", "cutoff": 1450, "resonance": 8.5},
+    "masterGain": 0.66,
+    "voiceLimit": 8,
+    "macros": {"brightness": 0.38, "texture": 0.42, "motion": 0.74}
+  }
 ]

@@ -1,13 +1,39 @@
-# Starter architecture
+# Mythophone engine architecture
 
-A single Vite/React/TypeScript application with independent npm dependencies and a lockfile. Zod validates versioned sample and import formats. No application server, account system, credential, or provider request is included.
+Mythophone is a small Vite/React/TypeScript browser application with independent npm dependencies and a lockfile. The playable slice is intentionally self-contained: it needs only a current browser with Web Audio and no account, server, private runtime, remote sample, or model credential.
 
-`src/domain.ts` owns preset/note validation; `src/audio.ts` owns the real audio graph and voice lifecycle; `src/presets.json` contains original prepared presets; `src/App.tsx` owns performance controls.
+## Data boundary
+
+`src/domain.ts` defines the versioned `mythophone/patch/v1` format. A patch has a primary oscillator, an optional sub-oscillator, deterministic white noise, an ADSR envelope, a low-pass or band-pass filter, a bounded master level and voice limit, and three macro defaults. Zod strict objects reject unknown fields, non-finite numbers, unsupported node types, incompatible versions, excess voices, and out-of-range values before compilation. The importer upgrades the starter's smaller `mythophone/preset/v1` shape, while exports always use the patch format.
+
+Performance events are compact validated data: `note-on`, `note-off`, `sustain`, and `macro`. They carry times within a bounded render window and never contain executable code, arbitrary graph references, remote URLs, or provider credentials.
+
+## Patch compiler and performance engine
+
+`src/audio.ts` owns both `compilePatch` and the supported graph compiler. Every voice is a small graph:
+
+```text
+oscillator ─┐
+sub-oscillator ─┼─> filter ─> envelope ─> master
+deterministic noise ─┘
+```
+
+The performance engine starts all sources on the audio clock, applies attack/decay/sustain levels, and schedules release ramps before stopping and disconnecting sources. Voice count is bounded by the patch; when the limit is reached the oldest voice is released so rapid play cannot accumulate unbounded nodes. `setSustain(false)` releases key-up voices, `allNotesOff` forces every voice into its release tail, and `dispose` releases and disconnects the master. Window blur and unmount call the same cleanup path.
+
+Macros are smooth parameter changes on the existing graph:
+
+- **Brightness** moves the filter cutoff inside the patch's safe range.
+- **Texture** scales the white-noise layer.
+- **Motion** changes a small LFO pitch drift.
+
+The current patch is never swapped until the replacement has passed `PatchSchema` and the graph has been constructed. A failed import or future provider response can therefore be refused atomically.
+
+## Offline rendering and proof
+
+`renderPerformance` creates an `OfflineAudioContext`, uses the same `createInstrument` compiler, schedules the validated event list, and returns the rendered `AudioBuffer` plus `analyzeRenderedAudio` measurements. The UI exposes this as **Render audio check** so browser verification can inspect real finite samples, peak, RMS, a zero-crossing frequency estimate, non-silent sample count, and the final tail RMS. Unit tests cover the schema, compiler boundary, analysis contract, and event limits; the browser check covers the real audio graph.
+
+This release does not claim zero latency, all-browser support, or commercial instrument quality. A broader browser matrix, listened-to audio examples, and a configured provider are part of the next slices.
 
 ## Future AI seam
 
-Add a thin server-side adapter behind a tested request/response format when beginning the AI slice. The product engine owns effects and state; a model proposes bounded data. Timeouts, unsupported output, and cancellation must preserve the current usable experience. Credentials must not become VITE_ variables or committed artifacts.
-
-## Scope
-
-This starter does not implement the complete docs/BUILD-PROMPT.md. docs/NEXT-STEPS.md lists the remaining work. A local dev server is not a public deployment.
+The planned sound-designer adapter will live behind a server-side request/response boundary. A provider may return only validated patch data and a concise explanation. Provider timeouts, refusals, cancellation, unsupported data, and compile errors must leave the current patch and performance state intact. Secrets must never become `VITE_` variables, browser-bundled data, exported patches, recordings, screenshots, or committed logs.
