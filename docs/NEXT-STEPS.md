@@ -9,11 +9,17 @@
 - Portable patch export/import with no model request.
 - Shared live/offline compiler path plus a browser OfflineAudioContext render proof panel.
 - Contract tests for schema rejection, event limits, compiler bounds, finite audio analysis, and prepared-patch distinction.
+- Optional server-side sound-designer adapter with bounded request/response schemas, timeout/cancellation handling, scoped revision validation, and an explicit provider-unconfigured response.
+- Patch history/revert, bounded performance recording, and WAV export through the shared offline compiler.
+- Portable performance bundles that restore a validated patch and timed take before WAV rendering.
+- Bounded patch share links that restore a validated instrument from the URL hash without a model request.
 
-## Next coherent slices
+## Remaining release gates
 
-1. Add a server-side sound-designer adapter that returns validated patches and constrained edits. Keep provider secrets off the client, and preserve the active patch on refusal, timeout, cancellation, or compile failure.
-2. Add patch history/revert, performance event recording, and WAV export from `renderPerformance`.
-3. Add release-quality browser/audio acceptance, downloadable rendered examples, accessibility and reduced-motion review, and fresh-clone setup evidence.
+1. Exercise one configured real provider through the server adapter, then render the returned patch and one scoped edit. Keep the live-provider claim separate from mocked adapter tests.
+2. Run the broader browser/audio matrix on the named release environment and publish through the repository's release owner.
+3. Record deployment/public-hosting state separately from local source and CI evidence.
+
+The repository now contains a GitHub Pages workflow for the prepared no-key build. The [browser/audio matrix receipt](BROWSER-MATRIX-2026-10-03.md) proves the local runtime at the named head; the Pages workflow remains source evidence only until the release owner merges it, GitHub Pages accepts the deployment, and a live URL is read back in the named browser environment.
 
 The no-key prepared mode remains the honest baseline. A real configured provider must be exercised separately before live AI is described as verified.
