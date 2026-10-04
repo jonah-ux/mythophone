@@ -32,5 +32,5 @@ This checklist keeps the first release's source, local runtime, provider, and pu
 - Exercise one credentialed real provider through `/api/design`, read back its validated patch, render notes from it, and exercise one scoped edit.
 - Run the broader release browser/audio matrix on the named release environment, then publish through the repository's release owner.
 - Record deployment/public-hosting state separately from local source and CI evidence.
-- The dated [release state record](RELEASE-STATE.md) currently records no GitHub releases, tags, or deployment records as of 2026-10-03 22:38:51 UTC.
-- A GitHub Pages workflow is checked in for the prepared no-key build; its merge, Pages configuration, deployment record, live URL, and browser readback remain unproven.
+- The dated [release state record](RELEASE-STATE.md) records the reviewed `main` head, GitHub Pages deployment IDs, public URL, and browser readback. GitHub Releases and tags remain absent.
+- The GitHub Pages workflow is merged and enabled for the prepared no-key build. Its public deployment and live browser behavior are proven separately from the missing configured adapter and credentialed provider canary.
