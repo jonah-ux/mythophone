@@ -95,6 +95,11 @@ describe('sound designer boundary', () => {
         code: 'request_invalid',
         message: 'sound-design request failed the bounded design schema',
       })
+      await expect(requestDesign('edit', 'make the attack softer', { ...patch, voiceLimit: 0 })).rejects.toMatchObject({
+        name: 'DesignError',
+        code: 'request_invalid',
+        message: 'sound-design request failed the bounded design schema',
+      })
       expect(calls).toBe(0)
     } finally {
       globalThis.fetch = previousFetch
