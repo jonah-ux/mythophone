@@ -31,6 +31,14 @@ This is local runtime evidence for the prepared instrument, not deployment or hu
 - The UI reported `AI request failed (provider_unconfigured); the current instrument is still playable.` and the server message `set MYTHOPHONE_AI_API_KEY and MYTHOPHONE_AI_MODEL on the server to enable configured AI mode`.
 - The active prepared instrument and measured sound field remained present after the failure.
 
+## Share-link compatibility follow-up
+
+- Observed at: `2026-10-03 23:49 UTC`
+- Source head: `6294077a24ed1eb294822723816e11d523258ed6`
+- On `http://127.0.0.1:5201/`, the normal **Copy share link** path reported `Copied a share link for Rain cello.`.
+- The same live page then had `navigator.clipboard` disabled before clicking the control again. The legacy copy path still reported the same success status, and `document.querySelectorAll('textarea').length` returned `0` after cleanup.
+- This exercises the fallback behavior in a real browser page; it does not claim an OS-level clipboard readback.
+
 ## Responsive proof
 
 - Resized the same page to `390x844`.

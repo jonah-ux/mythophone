@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import source from '../src/presets.json' with { type: 'json' }
-import { handleDesignRequest, startServer } from './design-adapter.mjs'
+import { handleDesignRequest, normalizeWebOrigin, startServer } from './design-adapter.mjs'
 
 const request = {
   schema: 'mythophone/design-request/v1',
@@ -97,4 +97,43 @@ test('uses the configured browser origin for CORS preflight', async () => {
     server.close()
     await closed
   }
+})
+
+test('rejects mismatched origins and non-JSON bodies before provider handling', async () => {
+  const server = startServer(0, { webOrigin: 'https://mythophone.example' })
+  await once(server, 'listening')
+  try {
+    const address = server.address()
+    assert.ok(address && typeof address === 'object')
+    const crossOrigin = await fetch(`http://127.0.0.1:${address.port}/api/design`, {
+      method: 'POST',
+      headers: {
+        origin: 'https://evil.example',
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    })
+    assert.equal(crossOrigin.status, 403)
+    assert.equal((await crossOrigin.json()).code, 'origin_not_allowed')
+
+    const wrongContentType = await fetch(`http://127.0.0.1:${address.port}/api/design`, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: '{}',
+    })
+    assert.equal(wrongContentType.status, 415)
+    assert.equal((await wrongContentType.json()).code, 'content_type_invalid')
+  } finally {
+    const closed = once(server, 'close')
+    server.close()
+    await closed
+  }
+})
+
+test('rejects unsafe or malformed browser origins before serving', () => {
+  assert.equal(normalizeWebOrigin('https://mythophone.example/app'), 'https://mythophone.example')
+  assert.throws(() => normalizeWebOrigin('*'), /wildcard/)
+  assert.throws(() => normalizeWebOrigin('ftp://mythophone.example'), /http\(s\)/)
+  assert.throws(() => normalizeWebOrigin('https://user:pass@mythophone.example'), /http\(s\)/)
+  assert.throws(() => normalizeWebOrigin('not-an-origin'), /http\(s\)/)
 })

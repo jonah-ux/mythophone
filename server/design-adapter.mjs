@@ -6,6 +6,20 @@ const MAX_PROVIDER_BYTES = 32 * 1024
 const REQUEST_TIMEOUT_MS = 15_000
 const DEFAULT_WEB_ORIGIN = 'http://127.0.0.1:5175'
 
+export function normalizeWebOrigin(value = DEFAULT_WEB_ORIGIN) {
+  if (value.trim() === '*') throw new Error('MYTHOPHONE_WEB_ORIGIN cannot be a wildcard')
+  let parsed
+  try {
+    parsed = new URL(value)
+  } catch {
+    throw new Error('MYTHOPHONE_WEB_ORIGIN must be a valid http(s) origin')
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+    throw new Error('MYTHOPHONE_WEB_ORIGIN must be a valid http(s) origin')
+  }
+  return parsed.origin
+}
+
 const bounded = (min, max) => z.number().finite().min(min).max(max)
 const OscillatorSchema = z.object({
   type: z.enum(['sine', 'triangle', 'sawtooth', 'square']),
@@ -186,15 +200,29 @@ export async function handleDesignRequest(raw, config = {
 }
 
 export function startServer(port = Number(process.env.MYTHOPHONE_API_PORT || 8787), options = {}) {
-  const webOrigin = options.webOrigin || process.env.MYTHOPHONE_WEB_ORIGIN || DEFAULT_WEB_ORIGIN
+  const webOrigin = normalizeWebOrigin(options.webOrigin || process.env.MYTHOPHONE_WEB_ORIGIN || DEFAULT_WEB_ORIGIN)
   const server = createServer(async (req, res) => {
+    const requestOrigin = req.headers.origin
+    if (requestOrigin && requestOrigin !== webOrigin) {
+      jsonResponse(res, 403, errorBody('origin_not_allowed', 'request origin is not allowed'), webOrigin)
+      return
+    }
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, { 'access-control-allow-origin': webOrigin, 'access-control-allow-headers': 'content-type' })
+      res.writeHead(204, {
+        'access-control-allow-origin': webOrigin,
+        'access-control-allow-headers': 'content-type',
+        'access-control-allow-methods': 'POST, OPTIONS',
+      })
       res.end()
       return
     }
     if (req.method !== 'POST' || req.url !== '/api/design') {
       jsonResponse(res, 404, errorBody('unknown', 'route not found'), webOrigin)
+      return
+    }
+    const contentType = req.headers['content-type']
+    if (typeof contentType !== 'string' || !/^application\/json(?:\s*;|$)/i.test(contentType)) {
+      jsonResponse(res, 415, errorBody('content_type_invalid', 'content-type must be application/json'), webOrigin)
       return
     }
     try {
