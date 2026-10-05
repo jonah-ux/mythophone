@@ -38,4 +38,24 @@ test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured s
   await handleVercelDesignRequest({ method: 'POST', body: { padding: 'x'.repeat(20_000) } }, oversizedResponse)
   assert.equal(oversizedResponse.statusCode, 413)
   assert.equal(JSON.parse(oversizedResponse.body).code, 'request_too_large')
+
+  const oversizedStringResponse = response()
+  await handleVercelDesignRequest({ method: 'POST', body: 'x'.repeat(20_000) }, oversizedStringResponse)
+  assert.equal(oversizedStringResponse.statusCode, 413)
+  assert.equal(JSON.parse(oversizedStringResponse.body).code, 'request_too_large')
+
+  const oversizedBufferResponse = response()
+  await handleVercelDesignRequest({ method: 'POST', body: Buffer.from('x'.repeat(20_000)) }, oversizedBufferResponse)
+  assert.equal(oversizedBufferResponse.statusCode, 413)
+  assert.equal(JSON.parse(oversizedBufferResponse.body).code, 'request_too_large')
+
+  const oversizedStreamResponse = response()
+  await handleVercelDesignRequest({
+    method: 'POST',
+    async *[Symbol.asyncIterator]() {
+      yield Buffer.from('x'.repeat(20_000))
+    },
+  }, oversizedStreamResponse)
+  assert.equal(oversizedStreamResponse.statusCode, 413)
+  assert.equal(JSON.parse(oversizedStreamResponse.body).code, 'request_too_large')
 })
