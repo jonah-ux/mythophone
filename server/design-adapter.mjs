@@ -221,7 +221,7 @@ export function startServer(port = Number(process.env.MYTHOPHONE_API_PORT || 878
       return
     }
     const contentType = req.headers['content-type']
-    if (typeof contentType !== 'string' || !/^application\\/json(?:\\s*;|$)/i.test(contentType)) {
+    if (typeof contentType !== 'string' || !/^application\/json(?:\s*;|$)/i.test(contentType)) {
       jsonResponse(res, 415, errorBody('content_type_invalid', 'content-type must be application/json'), webOrigin)
       return
     }
