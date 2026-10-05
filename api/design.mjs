@@ -1,6 +1,9 @@
 import { handleDesignRequest, normalizeWebOrigin } from '../server/design-adapter.mjs'
 
 const MAX_BODY_BYTES = 16 * 1024
+const DEFAULT_RATE_LIMIT_MAX = 30
+const RATE_LIMIT_WINDOW_MS = 60_000
+const requestsByClient = new Map()
 
 function sendJson(res, status, body) {
   res.statusCode = status
@@ -13,6 +16,21 @@ function setCors(res, webOrigin) {
   res.setHeader('access-control-allow-methods', 'POST, OPTIONS')
   res.setHeader('access-control-allow-headers', 'content-type')
   res.setHeader('cache-control', 'no-store')
+}
+
+function rateLimitKey(req) {
+  return String(req.headers?.['x-forwarded-for'] || req.headers?.['x-real-ip'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim() || 'unknown'
+}
+
+function rateLimitExceeded(req) {
+  const max = Math.max(1, Number(process.env.MYTHOPHONE_RATE_LIMIT_MAX || DEFAULT_RATE_LIMIT_MAX))
+  const now = Date.now()
+  const key = rateLimitKey(req)
+  const existing = requestsByClient.get(key)
+  const window = existing && now - existing.startedAt < RATE_LIMIT_WINDOW_MS ? existing : { startedAt: now, count: 0 }
+  window.count += 1
+  requestsByClient.set(key, window)
+  return window.count > max ? Math.ceil((window.startedAt + RATE_LIMIT_WINDOW_MS - now) / 1000) : 0
 }
 
 function assertBodySize(value) {
@@ -59,6 +77,12 @@ export async function handleVercelDesignRequest(req, res) {
   }
   if (req.method !== 'POST') {
     sendJson(res, 404, { schema: 'mythophone/design-error/v1', code: 'unknown', message: 'route not found' })
+    return
+  }
+  const retryAfter = rateLimitExceeded(req)
+  if (retryAfter > 0) {
+    res.setHeader('retry-after', String(retryAfter))
+    sendJson(res, 429, { schema: 'mythophone/design-error/v1', code: 'rate_limited', message: 'sound-designer request rate limit exceeded' })
     return
   }
   try {

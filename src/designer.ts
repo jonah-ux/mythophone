@@ -22,7 +22,7 @@ export const DesignResponseSchema = z.object({
 
 export const DesignErrorSchema = z.object({
   schema: z.literal('mythophone/design-error/v1'),
-  code: z.enum(['provider_unconfigured', 'provider_timeout', 'provider_refused', 'invalid_provider_output', 'request_invalid', 'request_too_large', 'unknown']),
+  code: z.enum(['provider_unconfigured', 'provider_timeout', 'provider_refused', 'invalid_provider_output', 'request_invalid', 'request_too_large', 'rate_limited', 'unknown']),
   message: z.string().min(1).max(400),
 }).strict()
 
@@ -90,6 +90,7 @@ function errorFromStatus(status: number, payload: unknown) {
   const parsed = DesignErrorSchema.safeParse(payload)
   if (parsed.success) return new DesignError(parsed.data.code, parsed.data.message)
   if (status === 413) return new DesignError('request_too_large', 'sound-design request is too large')
+  if (status === 429) return new DesignError('rate_limited', 'sound-designer request rate limit exceeded')
   if (status === 408 || status === 504) return new DesignError('provider_timeout', 'sound designer timed out')
   if (payload === null) {
     if (status === 404) return new DesignError('provider_refused', 'sound-designer endpoint was not found')

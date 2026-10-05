@@ -20,7 +20,7 @@
 2. Keep the deployment/readback receipt fresh after any source or hosting change; the current public Pages deployment is recorded separately in [RELEASE-STATE.md](RELEASE-STATE.md).
 3. Run the credentialed provider canary against the separately deployed adapter, then record its validated patch, scoped edit, and rendered result beside the static-host evidence.
 
-The public adapter boundary is now reachable through Vercel and enforces the bounded 16 KiB request cap, but it has CORS origin control without authentication or rate limiting. Keep `MYTHOPHONE_AI_API_KEY` and `MYTHOPHONE_AI_MODEL` unset until that control layer exists.
+The public adapter boundary is now reachable through Vercel and enforces the bounded 16 KiB request cap plus a coarse per-client request limit, but it does not yet have authentication or a durable shared rate-limit store. Keep `MYTHOPHONE_AI_API_KEY` and `MYTHOPHONE_AI_MODEL` unset until that control layer exists.
 
 The repository contains a GitHub Pages workflow for the prepared no-key build, and the current `main` head is deployed at [jonah-ux.github.io/mythophone](https://jonah-ux.github.io/mythophone/). The [browser/audio matrix receipt](BROWSER-MATRIX-2026-10-03.md) and [RELEASE-STATE.md](RELEASE-STATE.md) keep local, public, and provider evidence separate. Pages does not provide `/api/design`; a separately deployed adapter and provider credentials remain required for configured AI.
 
