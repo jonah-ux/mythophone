@@ -58,4 +58,20 @@ test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured s
   }, oversizedStreamResponse)
   assert.equal(oversizedStreamResponse.statusCode, 413)
   assert.equal(JSON.parse(oversizedStreamResponse.body).code, 'request_too_large')
+
+  const previousLimit = process.env.MYTHOPHONE_RATE_LIMIT_MAX
+  process.env.MYTHOPHONE_RATE_LIMIT_MAX = '1'
+  try {
+    const firstRateResponse = response()
+    await handleVercelDesignRequest({ method: 'POST', headers: { 'x-forwarded-for': 'rate-test' }, body: { ping: true } }, firstRateResponse)
+    assert.equal(firstRateResponse.statusCode, 400)
+    const secondRateResponse = response()
+    await handleVercelDesignRequest({ method: 'POST', headers: { 'x-forwarded-for': 'rate-test' }, body: { ping: true } }, secondRateResponse)
+    assert.equal(secondRateResponse.statusCode, 429)
+    assert.equal(JSON.parse(secondRateResponse.body).code, 'rate_limited')
+    assert.equal(secondRateResponse.headers.get('retry-after'), '60')
+  } finally {
+    if (previousLimit === undefined) delete process.env.MYTHOPHONE_RATE_LIMIT_MAX
+    else process.env.MYTHOPHONE_RATE_LIMIT_MAX = previousLimit
+  }
 })
