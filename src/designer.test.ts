@@ -160,7 +160,7 @@ it('sends operator authorization only as a request header, not in the patch payl
   const originalFetch = globalThis.fetch
   const token = 'synthetic-private-operator-token'
   globalThis.fetch = async (_url, init) => {
-    expect((init?.headers as Record<string, string>).authorization).toBe('Bearer ' + token)
+    expect(((init?.headers ?? {}) as Record<string, string>).authorization).toBe('Bearer ' + token)
     expect(String(init?.body)).not.toContain(token)
     return new Response(JSON.stringify({
       schema: 'mythophone/design-response/v1',

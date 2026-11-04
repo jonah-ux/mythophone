@@ -15,6 +15,10 @@ function response() {
 }
 
 test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured state', async () => {
+  const previousOperator = process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN
+  const operatorToken = 'c'.repeat(48)
+  process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN = operatorToken
+  try {
   const optionsResponse = response()
   await handleVercelDesignRequest({ method: 'OPTIONS' }, optionsResponse)
   assert.equal(optionsResponse.statusCode, 204)
@@ -24,6 +28,7 @@ test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured s
   const postResponse = response()
   await handleVercelDesignRequest({
     method: 'POST',
+    headers: { authorization: 'Bearer ' + operatorToken },
     body: {
       schema: 'mythophone/design-request/v1',
       mode: 'edit',
@@ -35,23 +40,24 @@ test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured s
   assert.equal(JSON.parse(postResponse.body).code, 'provider_unconfigured')
 
   const oversizedResponse = response()
-  await handleVercelDesignRequest({ method: 'POST', body: { padding: 'x'.repeat(20_000) } }, oversizedResponse)
+  await handleVercelDesignRequest({ method: 'POST', headers: { authorization: 'Bearer ' + operatorToken }, body: { padding: 'x'.repeat(20_000) } }, oversizedResponse)
   assert.equal(oversizedResponse.statusCode, 413)
   assert.equal(JSON.parse(oversizedResponse.body).code, 'request_too_large')
 
   const oversizedStringResponse = response()
-  await handleVercelDesignRequest({ method: 'POST', body: 'x'.repeat(20_000) }, oversizedStringResponse)
+  await handleVercelDesignRequest({ method: 'POST', headers: { authorization: 'Bearer ' + operatorToken }, body: 'x'.repeat(20_000) }, oversizedStringResponse)
   assert.equal(oversizedStringResponse.statusCode, 413)
   assert.equal(JSON.parse(oversizedStringResponse.body).code, 'request_too_large')
 
   const oversizedBufferResponse = response()
-  await handleVercelDesignRequest({ method: 'POST', body: Buffer.from('x'.repeat(20_000)) }, oversizedBufferResponse)
+  await handleVercelDesignRequest({ method: 'POST', headers: { authorization: 'Bearer ' + operatorToken }, body: Buffer.from('x'.repeat(20_000)) }, oversizedBufferResponse)
   assert.equal(oversizedBufferResponse.statusCode, 413)
   assert.equal(JSON.parse(oversizedBufferResponse.body).code, 'request_too_large')
 
   const oversizedStreamResponse = response()
   await handleVercelDesignRequest({
     method: 'POST',
+    headers: { authorization: 'Bearer ' + operatorToken },
     async *[Symbol.asyncIterator]() {
       yield Buffer.from('x'.repeat(20_000))
     },
@@ -63,16 +69,20 @@ test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured s
   process.env.MYTHOPHONE_RATE_LIMIT_MAX = '1'
   try {
     const firstRateResponse = response()
-    await handleVercelDesignRequest({ method: 'POST', headers: { 'x-forwarded-for': 'rate-test' }, body: { ping: true } }, firstRateResponse)
+    await handleVercelDesignRequest({ method: 'POST', headers: { authorization: 'Bearer ' + operatorToken, 'x-forwarded-for': 'rate-test' }, body: { ping: true } }, firstRateResponse)
     assert.equal(firstRateResponse.statusCode, 400)
     const secondRateResponse = response()
-    await handleVercelDesignRequest({ method: 'POST', headers: { 'x-forwarded-for': 'rate-test' }, body: { ping: true } }, secondRateResponse)
+    await handleVercelDesignRequest({ method: 'POST', headers: { authorization: 'Bearer ' + operatorToken, 'x-forwarded-for': 'rate-test' }, body: { ping: true } }, secondRateResponse)
     assert.equal(secondRateResponse.statusCode, 429)
     assert.equal(JSON.parse(secondRateResponse.body).code, 'rate_limited')
     assert.equal(secondRateResponse.headers.get('retry-after'), '60')
   } finally {
     if (previousLimit === undefined) delete process.env.MYTHOPHONE_RATE_LIMIT_MAX
     else process.env.MYTHOPHONE_RATE_LIMIT_MAX = previousLimit
+  }
+  } finally {
+    if (previousOperator === undefined) delete process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN
+    else process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN = previousOperator
   }
 })
 

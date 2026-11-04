@@ -22,7 +22,7 @@ export const DesignResponseSchema = z.object({
 
 export const DesignErrorSchema = z.object({
   schema: z.literal('mythophone/design-error/v1'),
-  code: z.enum(['provider_unconfigured', 'provider_timeout', 'provider_refused', 'invalid_provider_output', 'request_invalid', 'request_too_large', 'rate_limited', 'unknown']),
+  code: z.enum(['provider_unconfigured', 'provider_timeout', 'provider_refused', 'invalid_provider_output', 'request_invalid', 'request_too_large', 'rate_limited', 'operator_unauthorized', 'unknown']),
   message: z.string().min(1).max(400),
 }).strict()
 
@@ -120,7 +120,7 @@ export async function requestDesign(
   mode: DesignRequest['mode'],
   prompt: string,
   currentPatch: Patch,
-  options?: { endpoint?: string; signal?: AbortSignal },
+  options?: { endpoint?: string; signal?: AbortSignal; operatorToken?: string },
 ): Promise<DesignResponse> {
   const controller = new AbortController()
   if (options?.signal?.aborted) {
@@ -138,7 +138,7 @@ export async function requestDesign(
   try {
     const response = await fetch(options?.endpoint ?? DESIGN_ENDPOINT, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...(options?.operatorToken?.trim() ? { authorization: 'Bearer ' + options.operatorToken.trim() } : {}) },
       body: JSON.stringify(request),
       signal: controller.signal,
     })
