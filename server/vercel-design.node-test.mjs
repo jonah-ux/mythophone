@@ -75,3 +75,75 @@ test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured s
     else process.env.MYTHOPHONE_RATE_LIMIT_MAX = previousLimit
   }
 })
+
+test('configured provider requires an operator token before any upstream dispatch', async () => {
+  const keys = ['MYTHOPHONE_AI_API_KEY', 'MYTHOPHONE_AI_MODEL', 'MYTHOPHONE_OPERATOR_BEARER_TOKEN', 'MYTHOPHONE_RATE_LIMIT_MAX']
+  const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]))
+  const originalFetch = globalThis.fetch
+  const token = 'a'.repeat(48)
+  let providerCalls = 0
+  globalThis.fetch = async () => {
+    providerCalls += 1
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      schema: 'mythophone/design-response/v1', patch: source[0], explanation: 'Kept the patch.', changedPaths: [],
+    }) } }] }), { status: 200 })
+  }
+  process.env.MYTHOPHONE_AI_API_KEY = 'synthetic-provider-key'
+  process.env.MYTHOPHONE_AI_MODEL = 'synthetic-model'
+  process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN = token
+  process.env.MYTHOPHONE_RATE_LIMIT_MAX = '30'
+  const body = { schema: 'mythophone/design-request/v1', mode: 'edit', prompt: 'make the attack softer', currentPatch: source[0] }
+  try {
+    for (const headers of [{}, { authorization: 'Bearer wrong-token' }]) {
+      const result = response()
+      await handleVercelDesignRequest({ method: 'POST', headers, body }, result)
+      assert.equal(result.statusCode, 401)
+      assert.equal(JSON.parse(result.body).code, 'operator_unauthorized')
+      assert.equal(providerCalls, 0)
+    }
+    const allowed = response()
+    await handleVercelDesignRequest({ method: 'POST', headers: { authorization: 'Bearer ' + token }, body }, allowed)
+    assert.equal(allowed.statusCode, 200)
+    assert.equal(providerCalls, 1)
+  } finally {
+    globalThis.fetch = originalFetch
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key]
+      else process.env[key] = previous[key]
+    }
+  }
+})
+
+test('an authorized caller cannot reset the limiter by changing forwarded IP headers', async () => {
+  const keys = ['MYTHOPHONE_AI_API_KEY', 'MYTHOPHONE_AI_MODEL', 'MYTHOPHONE_OPERATOR_BEARER_TOKEN', 'MYTHOPHONE_RATE_LIMIT_MAX']
+  const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]))
+  const originalFetch = globalThis.fetch
+  const token = 'b'.repeat(48)
+  let providerCalls = 0
+  globalThis.fetch = async () => {
+    providerCalls += 1
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      schema: 'mythophone/design-response/v1', patch: source[0], explanation: 'Kept the patch.', changedPaths: [],
+    }) } }] }), { status: 200 })
+  }
+  process.env.MYTHOPHONE_AI_API_KEY = 'synthetic-provider-key'
+  process.env.MYTHOPHONE_AI_MODEL = 'synthetic-model'
+  process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN = token
+  process.env.MYTHOPHONE_RATE_LIMIT_MAX = '1'
+  const body = { schema: 'mythophone/design-request/v1', mode: 'edit', prompt: 'make the attack softer', currentPatch: source[0] }
+  try {
+    const first = response()
+    await handleVercelDesignRequest({ method: 'POST', headers: { authorization: 'Bearer ' + token, 'x-forwarded-for': '198.51.100.1' }, body }, first)
+    assert.equal(first.statusCode, 200)
+    const second = response()
+    await handleVercelDesignRequest({ method: 'POST', headers: { authorization: 'Bearer ' + token, 'x-forwarded-for': '198.51.100.2' }, body }, second)
+    assert.equal(second.statusCode, 429)
+    assert.equal(providerCalls, 1)
+  } finally {
+    globalThis.fetch = originalFetch
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key]
+      else process.env[key] = previous[key]
+    }
+  }
+})
