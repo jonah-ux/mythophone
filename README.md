@@ -61,13 +61,14 @@ Start the local adapter in a second terminal:
 ```sh
 cp .env.example .env
 # set MYTHOPHONE_AI_API_KEY and MYTHOPHONE_AI_MODEL in the server environment
+# set MYTHOPHONE_OPERATOR_BEARER_TOKEN (generate with `openssl rand -hex 32`)
 # set MYTHOPHONE_WEB_ORIGIN when the browser is hosted on a different origin
 npm run api
 ```
 
-Then run `npm run dev`, switch the UI from **Prepared** to **Configured AI**, and choose **New instrument** or **Refine current patch**. The browser sends a bounded `mythophone/design-request/v1` payload to `/api/design` by default. For a separately hosted frontend, set the public build-time `VITE_MYTHOPHONE_API_URL` to the adapter's `/api/design` URL and set `MYTHOPHONE_WEB_ORIGIN` on the adapter to the frontend origin. The server asks one OpenAI-compatible provider for JSON, validates `mythophone/design-response/v1`, and refuses any response that changes an undeclared path. A provider refusal, timeout, cancellation, oversized response, invalid graph, or missing configuration leaves the current playable patch in place.
+Then run `npm run dev`, switch the UI from **Prepared** to **Configured AI**, enter the operator access token (held in page memory only), and choose **New instrument** or **Refine current patch**. The browser sends a bounded `mythophone/design-request/v1` payload to `/api/design` by default. For a separately hosted frontend, set the public build-time `VITE_MYTHOPHONE_API_URL` to the adapter's `/api/design` URL and set `MYTHOPHONE_WEB_ORIGIN` on the adapter to the frontend origin. The server asks one OpenAI-compatible provider for JSON, validates `mythophone/design-response/v1`, and refuses any response that changes an undeclared path. A provider refusal, timeout, cancellation, oversized response, invalid graph, or missing configuration leaves the current playable patch in place.
 
-The adapter is provider-shaped but provider-agnostic. The public Vercel boundary is reachable and now applies browser-origin control, bounded request handling, and a coarse per-client request limit. It remains intentionally provider-unconfigured; do not add provider credentials until authentication and a durable rate-limit control are in place. This repository does not claim a live provider completion until a real credentialed request has been exercised and its returned patch has been rendered.
+The adapter is provider-shaped but provider-agnostic. The adapter refuses all paid-provider calls unless a strong operator token is configured and correctly supplied in the Authorization header. Authenticated callers share a best-effort per-process rate limiter keyed by operator, not spoofable forwarded IP headers. **This is not a durable cross-instance spending cap**: configure a provider-side budget and distributed rate limiter before publicly exposing an adapter with live paid credentials. Static GitHub Pages remains provider-unconfigured. This repository does not claim a live provider completion until a real credentialed request has been exercised and its returned patch has been rendered.
 
 ## Portable patches
 

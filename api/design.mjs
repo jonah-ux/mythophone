@@ -1,4 +1,5 @@
-import { handleDesignRequest, normalizeWebOrigin } from '../server/design-adapter.mjs'
+import { createHash } from 'node:crypto'
+import { authorizeDesignRequest, handleDesignRequest, normalizeWebOrigin } from '../server/design-adapter.mjs'
 
 const MAX_BODY_BYTES = 16 * 1024
 const DEFAULT_RATE_LIMIT_MAX = 30
@@ -14,18 +15,19 @@ function sendJson(res, status, body) {
 function setCors(res, webOrigin) {
   res.setHeader('access-control-allow-origin', webOrigin)
   res.setHeader('access-control-allow-methods', 'POST, OPTIONS')
-  res.setHeader('access-control-allow-headers', 'content-type')
+  res.setHeader('access-control-allow-headers', 'content-type, authorization')
   res.setHeader('cache-control', 'no-store')
 }
 
-function rateLimitKey(req) {
-  return String(req.headers?.['x-forwarded-for'] || req.headers?.['x-real-ip'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim() || 'unknown'
+function rateLimitKey() {
+  // Use the operator principal, never caller-controlled IP forwarding headers.
+  return createHash('sha256').update(process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN ?? '').digest('hex')
 }
 
-function rateLimitExceeded(req) {
+function rateLimitExceeded() {
   const max = Math.max(1, Number(process.env.MYTHOPHONE_RATE_LIMIT_MAX || DEFAULT_RATE_LIMIT_MAX))
   const now = Date.now()
-  const key = rateLimitKey(req)
+  const key = rateLimitKey()
   const existing = requestsByClient.get(key)
   const window = existing && now - existing.startedAt < RATE_LIMIT_WINDOW_MS ? existing : { startedAt: now, count: 0 }
   window.count += 1
@@ -79,7 +81,12 @@ export async function handleVercelDesignRequest(req, res) {
     sendJson(res, 404, { schema: 'mythophone/design-error/v1', code: 'unknown', message: 'route not found' })
     return
   }
-  const retryAfter = rateLimitExceeded(req)
+  const authorization = authorizeDesignRequest(req.headers)
+  if (authorization) {
+    sendJson(res, authorization.status, authorization.body)
+    return
+  }
+  const retryAfter = rateLimitExceeded()
   if (retryAfter > 0) {
     res.setHeader('retry-after', String(retryAfter))
     sendJson(res, 429, { schema: 'mythophone/design-error/v1', code: 'rate_limited', message: 'sound-designer request rate limit exceeded' })

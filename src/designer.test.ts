@@ -155,3 +155,24 @@ describe('sound designer boundary', () => {
     }
   })
 })
+
+it('sends operator authorization only as a request header, not in the patch payload', async () => {
+  const originalFetch = globalThis.fetch
+  const token = 'synthetic-private-operator-token'
+  globalThis.fetch = async (_url, init) => {
+    expect(((init?.headers ?? {}) as Record<string, string>).authorization).toBe('Bearer ' + token)
+    expect(String(init?.body)).not.toContain(token)
+    return new Response(JSON.stringify({
+      schema: 'mythophone/design-response/v1',
+      patch,
+      explanation: 'No changes needed.',
+      changedPaths: [],
+    }), { status: 200, headers: { 'content-type': 'application/json' } })
+  }
+  try {
+    const result = await requestDesign('edit', 'make the attack softer', patch, { operatorToken: token })
+    expect(result.patch.id).toBe(patch.id)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})

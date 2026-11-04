@@ -1,4 +1,5 @@
 import { createServer } from 'node:http'
+import { timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 
 const MAX_BODY_BYTES = 16 * 1024
@@ -95,7 +96,7 @@ function jsonResponse(res, status, body, webOrigin) {
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
     'access-control-allow-origin': webOrigin,
-    'access-control-allow-headers': 'content-type',
+    'access-control-allow-headers': 'content-type, authorization',
   })
   res.end(payload)
 }
@@ -199,6 +200,21 @@ export async function handleDesignRequest(raw, config = {
   }
 }
 
+export function authorizeDesignRequest(headers, env = process.env) {
+  const expected = env.MYTHOPHONE_OPERATOR_BEARER_TOKEN
+  if (!expected || Buffer.byteLength(expected, 'utf8') < 32 || Buffer.byteLength(expected, 'utf8') > 256) {
+    return { status: 503, body: errorBody('provider_unconfigured', 'operator access is not configured on the server') }
+  }
+  const header = headers?.authorization
+  const match = typeof header === 'string' ? /^Bearer\s+([^\s]+)$/i.exec(header.trim()) : null
+  const provided = Buffer.from(match?.[1] ?? '')
+  const configured = Buffer.from(expected)
+  if (provided.length !== configured.length || !timingSafeEqual(provided, configured)) {
+    return { status: 401, body: errorBody('operator_unauthorized', 'operator authorization required') }
+  }
+  return null
+}
+
 export function startServer(port = Number(process.env.MYTHOPHONE_API_PORT || 8787), options = {}) {
   const webOrigin = normalizeWebOrigin(options.webOrigin || process.env.MYTHOPHONE_WEB_ORIGIN || DEFAULT_WEB_ORIGIN)
   const server = createServer(async (req, res) => {
@@ -206,13 +222,18 @@ export function startServer(port = Number(process.env.MYTHOPHONE_API_PORT || 878
       res.writeHead(204, {
         'access-control-allow-origin': webOrigin,
         'access-control-allow-methods': 'POST, OPTIONS',
-        'access-control-allow-headers': 'content-type',
+        'access-control-allow-headers': 'content-type, authorization',
       })
       res.end()
       return
     }
     if (req.method !== 'POST' || req.url !== '/api/design') {
       jsonResponse(res, 404, errorBody('unknown', 'route not found'), webOrigin)
+      return
+    }
+    const authorization = authorizeDesignRequest(req.headers)
+    if (authorization) {
+      jsonResponse(res, authorization.status, authorization.body, webOrigin)
       return
     }
     try {
