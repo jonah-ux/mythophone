@@ -16,7 +16,7 @@ function response() {
 
 test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured state', async () => {
   const previousOperator = process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN
-  const operatorToken = 'c'.repeat(48)
+  let operatorToken = 'c'.repeat(48)
   process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN = operatorToken
   try {
   const optionsResponse = response()
@@ -65,6 +65,8 @@ test('Vercel adapter exposes CORS preflight and explicit provider-unconfigured s
   assert.equal(oversizedStreamResponse.statusCode, 413)
   assert.equal(JSON.parse(oversizedStreamResponse.body).code, 'request_too_large')
 
+  operatorToken = 'd'.repeat(48)
+  process.env.MYTHOPHONE_OPERATOR_BEARER_TOKEN = operatorToken
   const previousLimit = process.env.MYTHOPHONE_RATE_LIMIT_MAX
   process.env.MYTHOPHONE_RATE_LIMIT_MAX = '1'
   try {
